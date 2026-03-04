@@ -3,11 +3,20 @@ use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct BrailleImage {
+    pub width: usize,
+    pub height: usize,
+    pub art: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct AboutInfo {
     pub description: String,
     pub version: String,
     #[serde(default)]
     pub links: BTreeMap<String, String>,
+    #[serde(default)]
+    pub braille_images: Vec<BrailleImage>,
 }
 
 pub fn about_info() -> &'static AboutInfo {
@@ -18,10 +27,7 @@ pub fn about_info() -> &'static AboutInfo {
             description: String::new(),
             version: String::new(),
             links: BTreeMap::new(),
+            braille_images: Vec::new(),
         })
     })
-}
-
-pub fn about_image_bytes() -> &'static [u8] {
-    include_bytes!("../../about/about.png")
 }

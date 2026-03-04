@@ -22,3 +22,6 @@ tech_architecture_doc.md
 architecture_blueprint.mermaid
 /参考/
 /releases/
+
+.venv/
+temp/

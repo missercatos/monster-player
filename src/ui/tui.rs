@@ -7,7 +7,7 @@ use crossterm::execute;
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::{event, terminal};
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
@@ -839,15 +839,15 @@ fn render_about_modal(f: &mut ratatui::Frame, size: Rect, app: &mut AppState) {
     let info = crate::data::about::about_info();
     let version = format!("v{}", info.version);
     let y = area.y + area.height.saturating_sub(1);
-    let x = area.x + (area.width.saturating_sub(version.len() as u16)) / 2;
     let version_area = Rect {
-        x,
+        x: area.x.saturating_add(1),
         y,
         width: area.width.saturating_sub(2),
         height: 1,
     };
     f.render_widget(
         Paragraph::new(version)
+            .alignment(Alignment::Center)
             .style(Style::default().fg(app.theme.color_subtext()).bg(app.theme.color_surface())),
         version_area,
     );
@@ -912,11 +912,12 @@ fn render_about_text(f: &mut ratatui::Frame, area: Rect, app: &mut AppState) {
     let p = Paragraph::new(lines)
         .style(Style::default().bg(app.theme.color_surface()))
         .wrap(Wrap { trim: false });
+    let text_h = area.height.saturating_sub(offset_y).min(block_h.max(1));
     let text_area = Rect {
         x: area.x + offset_x,
         y: area.y + offset_y,
         width: block_w,
-        height: area.height,
+        height: text_h,
     };
     f.render_widget(p, text_area);
 }
@@ -945,88 +946,93 @@ fn wrap_text(s: &str, width: usize) -> Vec<String> {
 }
 
 fn about_braille_lines(width: usize, height: usize) -> Vec<Line<'static>> {
-    use image::imageops::FilterType;
+    let blank = " ".repeat(width);
+    if width == 0 || height == 0 {
+        return Vec::new();
+    }
 
-    let bytes = crate::data::about::about_image_bytes();
-    let img = match image::load_from_memory(bytes) {
-        Ok(v) => v.to_rgba8(),
-        Err(_) => {
-            let blank = " ".repeat(width);
-            return (0..height).map(|_| Line::from(blank.clone())).collect();
-        }
+    let info = crate::data::about::about_info();
+    let Some(selected) = select_about_braille_art(width, height, &info.braille_images) else {
+        return (0..height).map(|_| Line::from(blank.clone())).collect();
     };
 
-    let src_w = img.width().max(1);
-    let src_h = img.height().max(1);
-    let target_px_w = (width as u32).saturating_mul(2).max(1);
-    let target_px_h = (height as u32).saturating_mul(4).max(1);
+    let mut rows: Vec<String> = selected
+        .art
+        .lines()
+        .map(|line| line.trim_end().to_string())
+        .collect();
 
-    let scale = (target_px_w as f32 / src_w as f32)
-        .min(target_px_h as f32 / src_h as f32)
-        .max(0.01);
-    let new_w = ((src_w as f32) * scale).round().max(1.0) as u32;
-    let new_h = ((src_h as f32) * scale).round().max(1.0) as u32;
+    let mut start = 0usize;
+    let mut end = rows.len();
+    while start < end && rows[start].trim().is_empty() {
+        start += 1;
+    }
+    while end > start && rows[end - 1].trim().is_empty() {
+        end -= 1;
+    }
+    rows = rows[start..end].to_vec();
 
-    let resized = image::imageops::resize(&img, new_w, new_h, FilterType::Nearest);
-    let offset_x_cells = ((width as i32) - ((new_w as i32 + 1) / 2)).max(0) as usize / 2;
-    let offset_y_cells = ((height as i32) - ((new_h as i32 + 3) / 4)).max(0) as usize / 2;
+    let rows_w = rows.iter().map(|line| line.chars().count()).max().unwrap_or(0);
+    let canvas_w = selected.width.max(rows_w);
+    let canvas_h = selected.height.max(rows.len());
 
+    let offset_x = width.saturating_sub(canvas_w) / 2;
+    let offset_y = height.saturating_sub(canvas_h) / 2;
     let mut grid: Vec<Vec<char>> = vec![vec![' '; width]; height];
-    let cells_w = ((new_w + 1) / 2) as usize;
-    let cells_h = ((new_h + 3) / 4) as usize;
 
-    for cy in 0..cells_h {
-        for cx in 0..cells_w {
-            let mut bits = 0u8;
-            for py in 0..4 {
-                for px in 0..2 {
-                    let x = (cx as u32) * 2 + px;
-                    let y = (cy as u32) * 4 + py;
-                    if x >= new_w || y >= new_h {
-                        continue;
-                    }
-                    let p = resized.get_pixel(x, y).0;
-                    let a = p[3] as u16;
-                    if a == 0 {
-                        continue;
-                    }
-                    let lum = (p[0] as u16 + p[1] as u16 + p[2] as u16) / 3;
-                    if lum < 128 {
-                        bits |= braille_bit(px as usize, py as usize);
-                    }
-                }
+    for (row_idx, row) in rows.iter().enumerate() {
+        let gy = offset_y + row_idx;
+        if gy >= height {
+            break;
+        }
+        for (col_idx, ch) in row.chars().enumerate() {
+            let gx = offset_x + col_idx;
+            if gx >= width {
+                break;
             }
-            if bits != 0 {
-                let gx = offset_x_cells + cx;
-                let gy = offset_y_cells + cy;
-                if gx < width && gy < height {
-                    grid[gy][gx] = braille_from_bits(bits);
-                }
+            grid[gy][gx] = ch;
+        }
+    }
+
+    grid.into_iter().map(|row| Line::from(row.into_iter().collect::<String>())).collect()
+}
+
+fn select_about_braille_art<'a>(
+    width: usize,
+    height: usize,
+    arts: &'a [crate::data::about::BrailleImage],
+) -> Option<&'a crate::data::about::BrailleImage> {
+    let mut best_fit: Option<(&crate::data::about::BrailleImage, u128)> = None;
+    for art in arts {
+        if art.width == 0 || art.height == 0 {
+            continue;
+        }
+        if art.width <= width && art.height <= height {
+            let score = (art.width as u128) * (art.height as u128);
+            let should_replace = best_fit
+                .as_ref()
+                .map(|(_, best_score)| score > *best_score)
+                .unwrap_or(true);
+            if should_replace {
+                best_fit = Some((art, score));
             }
         }
     }
 
-    grid.into_iter()
-        .map(|row| Line::from(row.into_iter().collect::<String>()))
-        .collect()
-}
-
-fn braille_bit(dx: usize, dy: usize) -> u8 {
-    match (dx, dy) {
-        (0, 0) => 0x01,
-        (0, 1) => 0x02,
-        (0, 2) => 0x04,
-        (0, 3) => 0x40,
-        (1, 0) => 0x08,
-        (1, 1) => 0x10,
-        (1, 2) => 0x20,
-        (1, 3) => 0x80,
-        _ => 0,
+    if let Some((art, _)) = best_fit {
+        return Some(art);
     }
-}
 
-fn braille_from_bits(bits: u8) -> char {
-    std::char::from_u32(0x2800 + bits as u32).unwrap_or(' ')
+    arts
+        .iter()
+        .filter(|art| art.width > 0 && art.height > 0)
+        .min_by_key(|art| {
+            let dw = art.width.saturating_sub(width) as u128;
+            let dh = art.height.saturating_sub(height) as u128;
+            let overflow = dw.saturating_mul(dh).saturating_add(dw).saturating_add(dh);
+            let area = (art.width as u128).saturating_mul(art.height as u128);
+            (overflow, area)
+        })
 }
 
 fn render_help_modal(f: &mut ratatui::Frame, size: Rect, app: &mut AppState) {

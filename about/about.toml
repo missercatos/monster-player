@@ -8,3 +8,113 @@ bilibili = "白鞋油本油"
 github = "professor-lee"
 github_url = "https://github.com/professor-lee"
 qq_group = "1035793553"
+
+# --- about braille images: begin ---
+
+[[braille_images]]
+width = 16
+height = 8
+art = '''
+
+
+    ⣠⡀     ⣰⡆
+    ⣿⣷     ⡿⣿
+   ⢸⡇⠸⠷⠞⠛⠛⠛⠃⢸⡇
+   ⢸⡇       ⠈⡇
+   ⣾⠁
+   ⣿      ⣠⣴⠶⠶⠶⠞
+'''
+
+[[braille_images]]
+width = 18
+height = 10
+art = '''
+
+
+    ⣠⡀     ⣰⡆
+    ⣿⣷     ⡿⣿
+   ⢸⡇⠸⠷⠞⠛⠛⠛⠃⢸⡇
+   ⢸⡇       ⠈⡇
+   ⣾⠁           ⢀⣰
+   ⣿      ⣠⣴⠶⠶⠶⠞⠛⠁
+   ⣿    ⢀⡞⠉
+   ⡟    ⢸⠁
+'''
+
+[[braille_images]]
+width = 20
+height = 12
+art = '''
+
+
+    ⣠⡀     ⣰⡆
+    ⣿⣷     ⡿⣿     ⢡
+   ⢸⡇⠸⠷⠞⠛⠛⠛⠃⢸⡇    ⢸⡇
+   ⢸⡇       ⠈⡇    ⢸⡇
+   ⣾⠁           ⢀⣰⠟
+   ⣿      ⣠⣴⠶⠶⠶⠞⠛⠁
+   ⣿    ⢀⡞⠉
+   ⡟    ⢸⠁
+   ⠁    ⠈
+'''
+
+[[braille_images]]
+width = 22
+height = 14
+art = '''
+
+
+
+    ⢀⡀      ⣴⡄
+    ⣸⢿⡄    ⢠⡟⣷     ⠠⡀
+    ⣿⠘⣧⣤⣤⣤⣶⣾⠇⢻⡆     ⣧
+   ⢰⡿        ⠸⡇     ⣿
+   ⢸⡇         ⠃    ⣰⡏
+   ⢸⡇        ⣀⣀⣀⣠⣤⡾⠋
+   ⣾⠇     ⣴⠾⠛⠛⠉⠉⠉
+   ⣿     ⣼⠃
+   ⣿     ⡟
+'''
+
+[[braille_images]]
+width = 24
+height = 16
+art = '''
+
+
+
+
+     ⢀       ⢠⡀
+    ⢀⣿⣆      ⣿⣷      ⠄
+    ⢸⡇⣿⡄⣀⣀⣀⣀⣸⡟⢻⡇     ⠘⡄
+    ⣾⠇⠘⠛⠛⠛⠉⠉⠉⠁⠸⣷      ⣿
+    ⣿          ⢿     ⢰⡿
+   ⢠⣿          ⠈    ⣠⡿⠁
+   ⢸⡿       ⢀⣀⣤⣤⣤⣤⡶⠿⠋
+   ⢸⡇     ⢀⡾⠟⠉⠉⠁
+   ⢸⡇     ⣾⠁
+   ⢸⠇     ⡇
+'''
+
+[[braille_images]]
+width = 26
+height = 18
+art = '''
+
+
+
+
+              ⢀⡀
+     ⢰⣧       ⣼⣷⡀
+     ⣿⢻⣇     ⢠⣿⢻⣇      ⢡
+    ⢰⣿⠈⣿⣶⠶⠶⠶⠶⠾⠏⠘⣿      ⢸⣇
+    ⢸⡏          ⢿⡆     ⢸⣿
+    ⣾⡇          ⠘⠃     ⣼⠏
+    ⣿⠇              ⢀⣠⣾⠋
+    ⣿       ⢀⣠⣴⣶⣶⠶⠾⠿⠛⠋
+   ⢰⣿      ⣠⡿⠋⠁
+   ⢸⣿     ⢀⡿
+   ⢸⡏     ⠘⡇
+'''
+
+# --- about braille images: end ---
