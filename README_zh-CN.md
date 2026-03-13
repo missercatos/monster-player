@@ -81,7 +81,31 @@ sudo apt update
 sudo apt install -y pkg-config libasound2-dev libdbus-1-dev libchromaprint-dev
 ```
 
+### 安装驱动
+
+#### Arch Linux (AUR)
+
+你可以从 AUR 安装 Git 版本：
+
+```bash
+# 使用 AUR 助手 (例如 yay)
+yay -S cmplayer-git
+
+# 或手动构建
+git clone https://github.com/professor-lee/cli-music-player.git
+cd cli-music-player/AUR
+makepkg -si
+```
+
 ### 运行
+
+如果通过 AUR 安装，直接运行：
+
+```bash
+cmplayer
+```
+
+开发环境运行：
 
 ```bash
 cargo run
