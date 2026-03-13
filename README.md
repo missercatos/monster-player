@@ -85,11 +85,11 @@ sudo apt install -y pkg-config libasound2-dev libdbus-1-dev libchromaprint-dev
 
 #### Arch Linux (AUR)
 
-You can install the git version from the AUR:
+You can install it from the AUR:
 
 ```bash
 # Using an AUR helper (e.g., yay)
-yay -S cmplayer-git
+yay -S cmplayer
 
 # Or manually
 git clone https://github.com/professor-lee/cli-music-player.git
