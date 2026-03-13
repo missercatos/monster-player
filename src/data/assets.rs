@@ -3,7 +3,7 @@ use directories::BaseDirs;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const ENV_ASSET_DIR: &str = "CLI_MUSIC_PLAYER_ASSET_DIR";
+const ENV_ASSET_DIR: &str = "TMPLAYER_ASSET_DIR";
 
 const DEFAULT_CONFIG_TOML: &str = include_str!("../../config/default.toml");
 
@@ -19,7 +19,7 @@ pub fn resolve_asset_root() -> PathBuf {
     }
 
     if let Some(sys) = system_config_root() {
-        // Always use the OS-level config directory: <config_dir>/cli-music-player
+        // Always use the OS-level config directory: <config_dir>/tmplayer
         // Best-effort migration from legacy local .config, to avoid losing prior settings.
         let _ = migrate_legacy_local_assets(&sys);
         let _ = ensure_all_assets(&sys);
@@ -55,10 +55,10 @@ pub fn ensure_assets_ready() -> Result<PathBuf> {
 
 fn system_config_root() -> Option<PathBuf> {
     // Cross-platform OS config directory.
-    // Linux: $XDG_CONFIG_HOME/cli-music-player (usually ~/.config/cli-music-player)
-    // macOS: ~/Library/Application Support/cli-music-player
-    // Windows: %APPDATA%\cli-music-player
-    BaseDirs::new().map(|d| d.config_dir().join("cli-music-player"))
+    // Linux: $XDG_CONFIG_HOME/tmplayer (usually ~/.config/tmplayer)
+    // macOS: ~/Library/Application Support/tmplayer
+    // Windows: %APPDATA%\tmplayer
+    BaseDirs::new().map(|d| d.config_dir().join("tmplayer"))
 }
 
 fn local_config_root() -> PathBuf {

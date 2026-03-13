@@ -19,17 +19,17 @@ fn main() {
 fn real_main() -> Result<()> {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=CARGO_FEATURE_BUNDLE_CAVA");
-    println!("cargo:rerun-if-env-changed=CLI_MUSIC_PLAYER_CAVA_BUNDLE_VERSION");
-    println!("cargo:rerun-if-env-changed=CLI_MUSIC_PLAYER_CAVA_BUNDLE_URL");
-    println!("cargo:rerun-if-env-changed=CLI_MUSIC_PLAYER_CAVA_BUNDLE_SKIP");
+    println!("cargo:rerun-if-env-changed=TMPLAYER_CAVA_BUNDLE_VERSION");
+    println!("cargo:rerun-if-env-changed=TMPLAYER_CAVA_BUNDLE_URL");
+    println!("cargo:rerun-if-env-changed=TMPLAYER_CAVA_BUNDLE_SKIP");
 
     // Only run when the feature is enabled.
     if std::env::var_os("CARGO_FEATURE_BUNDLE_CAVA").is_none() {
         return Ok(());
     }
 
-    if std::env::var_os("CLI_MUSIC_PLAYER_CAVA_BUNDLE_SKIP").is_some() {
-        println!("cargo:warning=bundle-cava: skipped (CLI_MUSIC_PLAYER_CAVA_BUNDLE_SKIP is set)");
+    if std::env::var_os("TMPLAYER_CAVA_BUNDLE_SKIP").is_some() {
+        println!("cargo:warning=bundle-cava: skipped (TMPLAYER_CAVA_BUNDLE_SKIP is set)");
         return Ok(());
     }
 
@@ -50,8 +50,8 @@ fn real_main() -> Result<()> {
         return Ok(());
     }
 
-    let version = std::env::var("CLI_MUSIC_PLAYER_CAVA_BUNDLE_VERSION").unwrap_or_else(|_| CAVA_VERSION.to_string());
-    let url = std::env::var("CLI_MUSIC_PLAYER_CAVA_BUNDLE_URL").unwrap_or_else(|_| {
+    let version = std::env::var("TMPLAYER_CAVA_BUNDLE_VERSION").unwrap_or_else(|_| CAVA_VERSION.to_string());
+    let url = std::env::var("TMPLAYER_CAVA_BUNDLE_URL").unwrap_or_else(|_| {
         format!("https://github.com/karlstav/cava/archive/refs/tags/{version}.tar.gz")
     });
 
@@ -111,7 +111,7 @@ fn real_main() -> Result<()> {
         )?;
     }
 
-    // Keep configure default (auto-detect). Users can override by setting CLI_MUSIC_PLAYER_CAVA_BUNDLE_URL
+    // Keep configure default (auto-detect). Users can override by setting TMPLAYER_CAVA_BUNDLE_URL
     // to a fork or a patched tarball if needed.
     run_in(&src_dir, "sh", &["-c", "./configure"], "configure")?;
 
@@ -159,7 +159,7 @@ fn real_main() -> Result<()> {
 
 fn download_to(url: &str, dst: &Path) -> Result<()> {
     let resp = ureq::get(url)
-        .set("User-Agent", "cli-music-player build.rs")
+        .set("User-Agent", "tmplayer build.rs")
         .call()
         .with_context(|| format!("GET {url}"))?;
 

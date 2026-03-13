@@ -164,7 +164,7 @@ fn find_cava_executable() -> Option<PathBuf> {
     // 1) env var override
     // 2) bundled next to our executable or in ./third_party/cava/
     // 3) PATH fallback
-    if let Some(p) = std::env::var_os("CLI_MUSIC_PLAYER_CAVA") {
+    if let Some(p) = std::env::var_os("TMPLAYER_CAVA") {
         let p = PathBuf::from(p);
         if p.is_file() {
             return Some(p);
@@ -204,7 +204,7 @@ fn resolve_cava_executable() -> Result<(PathBuf, Option<TempDir>)> {
     #[cfg(feature = "bundle-cava")]
     {
         let temp_dir = tempfile::Builder::new()
-            .prefix("cli-music-player-cava-")
+            .prefix("tmplayer-cava-")
             .tempdir()
             .context("create temp dir for cava")?;
         let path = temp_dir.path().join("cava");
@@ -285,5 +285,5 @@ fn temp_cfg_path() -> String {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
-    format!("/tmp/cli-music-player-cava-{pid}-{ts}.conf")
+    format!("/tmp/tmplayer-cava-{pid}-{ts}.conf")
 }

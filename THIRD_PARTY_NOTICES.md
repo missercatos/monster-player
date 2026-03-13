@@ -13,6 +13,6 @@ This project may optionally bundle the `cava` binary by downloading and building
 
 When building with the Cargo feature `bundle-cava`, the build script (`build.rs`) downloads the upstream source tarball for a pinned tag (default: `0.10.6`), builds it using the upstream build system, and copies the resulting `cava` executable next to this project's built binary under `target/<profile>/cava`.
 
-- To override the version: set `CLI_MUSIC_PLAYER_CAVA_BUNDLE_VERSION`.
-- To override the source URL: set `CLI_MUSIC_PLAYER_CAVA_BUNDLE_URL`.
-- To skip bundling: set `CLI_MUSIC_PLAYER_CAVA_BUNDLE_SKIP`.
+- To override the version: set `TMPLAYER_CAVA_BUNDLE_VERSION`.
+- To override the source URL: set `TMPLAYER_CAVA_BUNDLE_URL`.
+- To skip bundling: set `TMPLAYER_CAVA_BUNDLE_SKIP`.

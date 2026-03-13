@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="logo.svg" alt="CLI Music Player Logo" width="256">
+  <img src="logo.svg" alt="TMPlayer (TUI Music Player) Logo" width="256">
 </p>
 
-<h1 align="center">CLI Music Player</h1>
+<h1 align="center">TMPlayer (TUI Music Player)</h1>
 
 <p align="center">
 	<a href="README.md">English</a>
@@ -18,7 +18,7 @@
 	<img src="https://img.shields.io/badge/Rust-2021-orange" alt="Rust">
 	<img src="https://img.shields.io/badge/Platform-Linux-informational" alt="Platform">
 	<img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="License">
-	<img src="https://img.shields.io/github/stars/professor-lee/cli-music-player?style=flat&label=Stars&color=FFC700&logo=github&logoColor=white" alt="Stars">
+	<img src="https://img.shields.io/github/stars/professor-lee/TMPlayer?style=flat&label=Stars&color=FFC700&logo=github&logoColor=white" alt="Stars">
 </p>
 
 <h2 align="center">Project Overview</h2>
@@ -27,7 +27,7 @@ This is a Linux terminal (TUI) music player built with Rust.
 It supports local playback and system monitoring, and includes spectrum visualization.
 
 <p align="center">
-	<img src="overview.png" alt="CLI Music Player Overview">
+	<img src="overview.png" alt="TMPlayer (TUI Music Player) Overview">
 </p>
 
 <h2 align="center">Features</h2>
@@ -89,11 +89,11 @@ You can install it from the AUR:
 
 ```bash
 # Using an AUR helper (e.g., yay)
-yay -S cmplayer
+yay -S tmplayer
 
 # Or manually
-git clone https://github.com/professor-lee/cli-music-player.git
-cd cli-music-player/AUR
+git clone https://github.com/professor-lee/TMPlayer.git
+cd TMPlayer/AUR
 makepkg -si
 ```
 
@@ -102,7 +102,7 @@ makepkg -si
 If installed via AUR, simply run:
 
 ```bash
-cmplayer
+tmplayer
 ```
 
 For development:
@@ -115,14 +115,14 @@ cargo run
 
 ```bash
 cargo build --release
-./target/release/cli-music-player
+./target/release/tmplayer
 ```
 
 On first run, the app will create (if missing) its config + theme files under your OS config directory.
 
-- Linux: `$XDG_CONFIG_HOME/cli-music-player` (usually `~/.config/cli-music-player`)
+- Linux: `$XDG_CONFIG_HOME/tmplayer` (usually `~/.config/tmplayer`)
 
-You can override the root directory with `CLI_MUSIC_PLAYER_ASSET_DIR` (it will still use `config/` and `themes/` under that root).
+You can override the root directory with `TMPLAYER_ASSET_DIR` (it will still use `config/` and `themes/` under that root).
 
 <h2 align="center">Spectrum Visualization (cava)</h2>
 
@@ -131,7 +131,7 @@ If `cava` is not available, it will fall back to the internal FFT pipeline.
 
 `cava` executable resolution order:
 
-1. `CLI_MUSIC_PLAYER_CAVA` environment variable (absolute/relative path)
+1. `TMPLAYER_CAVA` environment variable (absolute/relative path)
 2. Next to the app executable: `./cava`
 3. Next to the app executable: `./third_party/cava/cava`
 4. `cava` in `PATH`
@@ -176,17 +176,17 @@ You can override the source/version used by the build script:
 
 ```bash
 # override tag
-CLI_MUSIC_PLAYER_CAVA_BUNDLE_VERSION=0.10.6 cargo build --release --features bundle-cava
+TMPLAYER_CAVA_BUNDLE_VERSION=0.10.6 cargo build --release --features bundle-cava
 
 # override URL (tar.gz)
-CLI_MUSIC_PLAYER_CAVA_BUNDLE_URL=https://github.com/karlstav/cava/archive/refs/tags/0.10.6.tar.gz \
+TMPLAYER_CAVA_BUNDLE_URL=https://github.com/karlstav/cava/archive/refs/tags/0.10.6.tar.gz \
 	cargo build --release --features bundle-cava
 ```
 
 If you want to enable the feature but skip bundling (e.g. distro packaging / CI), you can:
 
 ```bash
-CLI_MUSIC_PLAYER_CAVA_BUNDLE_SKIP=1 cargo build --release --features bundle-cava
+TMPLAYER_CAVA_BUNDLE_SKIP=1 cargo build --release --features bundle-cava
 ```
 
 ### Windows (build notes / limited features)
@@ -251,8 +251,8 @@ Downloaded storage paths (when enabled):
 
 Default locations (Linux):
 
-- `~/.config/cli-music-player/config/default.toml`
-- `~/.config/cli-music-player/themes/*.toml`
+- `~/.config/tmplayer/config/default.toml`
+- `~/.config/tmplayer/themes/*.toml`
 
 <h2 align="center">Keyboard Shortcuts</h2>
 

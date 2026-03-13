@@ -258,7 +258,7 @@ fn is_unknown(s: &str) -> bool {
 }
 
 fn lrclib_fetch(title: &str, artist: &str, album: &str, duration_secs: u64) -> Option<String> {
-    let agent = "cli-music-player/0.1.0 (https://github.com)";
+    let agent = "tmplayer/0.1.0 (https://github.com)";
     let resp = http_agent()
         .get("https://lrclib.net/api/get")
         .set("User-Agent", agent)
@@ -305,7 +305,7 @@ fn musicbrainz_release_id(title: &str, artist: &str, album: &str) -> Option<Stri
         query.push_str(&format!(" AND release:\"{}\"", sanitize_mb(album)));
     }
 
-    let agent = "cli-music-player/0.1.0 (https://github.com)";
+    let agent = "tmplayer/0.1.0 (https://github.com)";
     let resp = http_agent()
         .get("https://musicbrainz.org/ws/2/recording/")
         .set("User-Agent", agent)
@@ -349,7 +349,7 @@ struct MbRelease {
 }
 
 fn cover_art_archive_fetch(release_id: &str) -> Option<(Vec<u8>, Option<String>)> {
-    let agent = "cli-music-player/0.1.0 (https://github.com)";
+    let agent = "tmplayer/0.1.0 (https://github.com)";
     let url = format!("https://coverartarchive.org/release/{}/front-500", release_id);
     let resp = http_agent().get(&url).set("User-Agent", agent).call().ok()?;
     if resp.status() != 200 {
@@ -413,7 +413,7 @@ fn acoustid_lookup(api_key: &str, fingerprint: &str, duration_secs: u32) -> Opti
         return None;
     }
 
-    let agent = "cli-music-player/0.1.0 (https://github.com)";
+    let agent = "tmplayer/0.1.0 (https://github.com)";
     let resp = http_agent()
         .get("https://api.acoustid.org/v2/lookup")
         .set("User-Agent", agent)
