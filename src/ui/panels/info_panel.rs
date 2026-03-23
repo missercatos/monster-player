@@ -15,6 +15,9 @@ use std::hash::{Hash, Hasher};
 pub struct InfoPanelLayout {
     pub inner: Rect,
     pub cover: Rect,
+    pub meta_title: Rect,
+    pub meta_artist: Rect,
+    pub meta_album: Rect,
     pub progress: Rect,
     pub volume: Rect,
     pub controls: Rect,
@@ -24,60 +27,106 @@ pub struct InfoPanelLayout {
 }
 
 pub fn layout(area: Rect) -> InfoPanelLayout {
-    // padding +1 char compared to previous (keep borders outside)
     let inner = area.inner(&ratatui::layout::Margin { horizontal: 2, vertical: 2 });
 
-    // cover box: approximate visual square for terminal glyph aspect.
-    // Baseline is height ≈ width/2; user request: expand vertically by +4 chars.
-    let max_cover_h = inner.height.saturating_sub(10).max(3);
-    let max_square_h_by_width = (inner.width / 2).max(3);
-    let mut cover_h = max_square_h_by_width.min(max_cover_h);
-    cover_h = cover_h.saturating_add(4).min(max_square_h_by_width).min(max_cover_h);
-    let cover_w = (cover_h.saturating_mul(2)).min(inner.width).max(6);
-
-    // stack height (using the fixed offsets below)
-    let stack_h = cover_h
-        .saturating_add(1) // gap
-        .saturating_add(3) // title/artist/album
-        .saturating_add(1) // gap
-        .saturating_add(1) // time
-        .saturating_add(1) // gap
-        .saturating_add(1) // progress
-        .saturating_add(1) // gap
-        .saturating_add(1) // volume
-        .saturating_add(1) // vol label
-        .saturating_add(1) // gap
-        .saturating_add(1) // controls
-        .saturating_add(1); // S/R hint
-
-    let top_pad = inner.height.saturating_sub(stack_h) / 2;
-    let cover_y = inner.y.saturating_add(top_pad);
-    let cover = Rect {
-        x: inner.x + (inner.width.saturating_sub(cover_w)) / 2,
-        y: cover_y,
-        width: cover_w,
-        height: cover_h,
-    };
-
-    let title_y = cover.y + cover.height + 1;
-
-    let time_line = Rect { x: inner.x, y: title_y + 4, width: inner.width, height: 1 };
-    let progress = Rect { x: inner.x, y: title_y + 6, width: inner.width, height: 1 };
-    let volume = Rect { x: inner.x, y: title_y + 8, width: inner.width, height: 1 };
-    let volume_label = Rect { x: inner.x, y: title_y + 9, width: inner.width, height: 1 };
-    let controls = Rect { x: inner.x, y: title_y + 11, width: inner.width, height: 1 };
-    let sr_hint = Rect { x: inner.x, y: title_y + 12, width: inner.width, height: 1 };
-
-    InfoPanelLayout {
+    let mut out = InfoPanelLayout {
         inner,
-        cover,
-        progress,
-        volume,
-        controls,
-        volume_label,
-        time_line,
-        sr_hint,
+        ..InfoPanelLayout::default()
+    };
+    if inner.width == 0 || inner.height == 0 {
+        return out;
     }
+
+    // 保底行：3 行元数据 + 控制按钮 + 进度条 + 音量条。
+    let core_rows: u16 = 6;
+    let max_square_h_by_width = (inner.width / 2).max(1);
+
+    if inner.height >= core_rows {
+        // 封面是可收缩项：先满足核心行，再用剩余空间给封面。
+        let max_cover_h_by_height = inner.height.saturating_sub(core_rows + 1);
+        let cover_h = if max_cover_h_by_height >= 3 {
+            max_square_h_by_width.min(max_cover_h_by_height).max(3)
+        } else {
+            0
+        };
+        let cover_w = if cover_h > 0 {
+            (cover_h.saturating_mul(2)).min(inner.width).max(2)
+        } else {
+            0
+        };
+
+        out.cover = Rect {
+            x: inner.x + (inner.width.saturating_sub(cover_w)) / 2,
+            y: inner.y,
+            width: cover_w,
+            height: cover_h,
+        };
+
+        let mut y = inner.y + cover_h;
+        if cover_h > 0 {
+            y = y.saturating_add(1); // cover 与内容之间留 1 行
+        }
+
+        // 剩余行里先保核心，再按余量给 time / volume label。
+        let remaining = inner.height.saturating_sub(y.saturating_sub(inner.y));
+        let extra = remaining.saturating_sub(core_rows);
+        let show_time = extra >= 1;
+        let show_volume_label = extra >= 2;
+
+        out.meta_title = Rect { x: inner.x, y, width: inner.width, height: 1 };
+        y = y.saturating_add(1);
+        out.meta_artist = Rect { x: inner.x, y, width: inner.width, height: 1 };
+        y = y.saturating_add(1);
+        out.meta_album = Rect { x: inner.x, y, width: inner.width, height: 1 };
+        y = y.saturating_add(1);
+
+        if show_time {
+            out.time_line = Rect { x: inner.x, y, width: inner.width, height: 1 };
+            y = y.saturating_add(1);
+        }
+
+        out.progress = Rect { x: inner.x, y, width: inner.width, height: 1 };
+        y = y.saturating_add(1);
+        out.volume = Rect { x: inner.x, y, width: inner.width, height: 1 };
+        y = y.saturating_add(1);
+
+        if show_volume_label {
+            out.volume_label = Rect { x: inner.x, y, width: inner.width, height: 1 };
+            y = y.saturating_add(1);
+        }
+
+        out.controls = Rect { x: inner.x, y, width: inner.width, height: 1 };
+    } else {
+        // 极小窗口：按优先级逐项保留，封面隐藏。
+        let mut y = inner.y;
+        let mut rem = inner.height;
+
+        if rem >= 3 {
+            out.meta_title = Rect { x: inner.x, y, width: inner.width, height: 1 };
+            y = y.saturating_add(1);
+            out.meta_artist = Rect { x: inner.x, y, width: inner.width, height: 1 };
+            y = y.saturating_add(1);
+            out.meta_album = Rect { x: inner.x, y, width: inner.width, height: 1 };
+            y = y.saturating_add(1);
+            rem = rem.saturating_sub(3);
+        }
+        if rem >= 1 {
+            out.controls = Rect { x: inner.x, y, width: inner.width, height: 1 };
+            y = y.saturating_add(1);
+            rem = rem.saturating_sub(1);
+        }
+        if rem >= 1 {
+            out.progress = Rect { x: inner.x, y, width: inner.width, height: 1 };
+            y = y.saturating_add(1);
+            rem = rem.saturating_sub(1);
+        }
+        if rem >= 1 {
+            out.volume = Rect { x: inner.x, y, width: inner.width, height: 1 };
+        }
+    }
+
+    out.sr_hint = Rect { x: inner.x, y: inner.y, width: 0, height: 0 };
+    out
 }
 
 pub fn render(f: &mut Frame, area: Rect, app: &mut AppState) {
@@ -219,59 +268,61 @@ pub fn render(f: &mut Frame, area: Rect, app: &mut AppState) {
         }
     }
 
-    // metadata lines
-    let title_y = l.cover.y + l.cover.height + 1;
-    let inner_bottom = l.inner.y.saturating_add(l.inner.height);
-    let can_render_meta = l.controls.y.saturating_add(l.controls.height) <= inner_bottom;
+    // metadata lines and controls (draw each line only when layout keeps it visible)
+    let title = app.player.track.title.as_str();
+    let artist = app.player.track.artist.as_str();
+    let album = app.player.track.album.as_str();
 
-    if can_render_meta {
-        let title = app.player.track.title.as_str();
-        let artist = app.player.track.artist.as_str();
-        let album = app.player.track.album.as_str();
+    let text_style = Style::default().fg(app.theme.color_text());
+    let sub_style = Style::default().fg(app.theme.color_subtext());
 
-        let text_style = Style::default().fg(app.theme.color_text());
-        let sub_style = Style::default().fg(app.theme.color_subtext());
+    if l.meta_title.height > 0 {
+        f.render_widget(Paragraph::new(title).style(text_style).alignment(Alignment::Center), l.meta_title);
+    }
+    if l.meta_artist.height > 0 {
+        f.render_widget(Paragraph::new(artist).style(sub_style).alignment(Alignment::Center), l.meta_artist);
+    }
+    if l.meta_album.height > 0 {
+        f.render_widget(Paragraph::new(album).style(sub_style).alignment(Alignment::Center), l.meta_album);
+    }
 
-        let t = Paragraph::new(title).style(text_style).alignment(Alignment::Center);
-        f.render_widget(t, Rect { x: l.inner.x, y: title_y, width: l.inner.width, height: 1 });
-        let a = Paragraph::new(artist).style(sub_style).alignment(Alignment::Center);
-        f.render_widget(a, Rect { x: l.inner.x, y: title_y + 1, width: l.inner.width, height: 1 });
-        let al = Paragraph::new(album).style(sub_style).alignment(Alignment::Center);
-        f.render_widget(al, Rect { x: l.inner.x, y: title_y + 2, width: l.inner.width, height: 1 });
-
-        // time + progress
-        let pos = app.player.position;
-        let dur = app.player.track.duration;
+    let pos = app.player.position;
+    let dur = app.player.track.duration;
+    if l.time_line.height > 0 {
         let left = timefmt::mmss(pos);
         let right = timefmt::mmss(dur);
         let time_line = format!(
             "{}{:>width$}",
             left,
             right,
-            width = (l.inner.width as usize).saturating_sub(left.len())
+            width = (l.time_line.width as usize).saturating_sub(left.len())
         );
         f.render_widget(
             Paragraph::new(Line::from(time_line)).style(sub_style).alignment(Alignment::Center),
             l.time_line,
         );
+    }
 
+    if l.progress.height > 0 {
         progress_bar::render(f, l.progress, app, pos, dur);
+    }
+    if l.volume.height > 0 {
         volume_bar::render(f, l.volume, app, app.player.volume);
-
+    }
+    if l.volume_label.height > 0 {
         let v_label = format!("Vol {}%", (app.player.volume * 100.0).round() as i32);
         f.render_widget(
             Paragraph::new(v_label).style(sub_style).alignment(Alignment::Left),
             l.volume_label,
         );
-
+    }
+    if l.controls.height > 0 {
         control_buttons::render(f, l.controls, app);
-
-        // (Removed S/R hint)
     }
 
     // header right status (theme + mode)
     let header = format!("[{}]  [Mode: {}]", app.theme.name.as_label(), mode_label(app.player.mode));
-    let header_area = Rect { x: area.x + 2, y: area.y, width: area.width.saturating_sub(4), height: 1 };
+    let header_area = Rect { x: l.inner.x, y: area.y, width: l.inner.width, height: 1 };
     f.render_widget(
         Paragraph::new(header)
             .style(Style::default().fg(app.theme.color_subtext()))
