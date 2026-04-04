@@ -19,21 +19,31 @@ pub struct PlaylistPanelLayout {
     pub list_inner: Rect,
 }
 
+const MIN_COVER_LAYOUT_WIDTH: u16 = 6;
+const MIN_COVER_LAYOUT_HEIGHT: u16 = 7;
+
+fn list_only_layout(inner: Rect) -> PlaylistPanelLayout {
+    PlaylistPanelLayout {
+        inner,
+        cover_area: Rect { x: inner.x, y: inner.y, width: inner.width, height: 0 },
+        cover_rect: Rect { x: inner.x, y: inner.y, width: 0, height: 0 },
+        separator_area: Rect { x: inner.x, y: inner.y, width: inner.width, height: 0 },
+        list_area: inner,
+        list_inner: inner,
+    }
+}
+
 pub fn compute_layout(area: Rect, app: &AppState) -> PlaylistPanelLayout {
     let inner = area.inner(&ratatui::layout::Margin { horizontal: 1, vertical: 1 });
 
     let show_cover = app.player.mode == PlayMode::LocalPlayback
         && (app.local_folder_kind == LocalFolderKind::Album || app.local_folder_kind == LocalFolderKind::MultiAlbum);
 
-    if !show_cover {
-        return PlaylistPanelLayout {
-            inner,
-            cover_area: Rect { x: inner.x, y: inner.y, width: inner.width, height: 0 },
-            cover_rect: Rect { x: inner.x, y: inner.y, width: 0, height: 0 },
-            separator_area: Rect { x: inner.x, y: inner.y, width: inner.width, height: 0 },
-            list_area: inner,
-            list_inner: inner,
-        };
+    // During the slide animation, ratatui can return a zero-area inner rect once the
+    // overlay becomes narrower than the border margin. Fall back to a list-only layout
+    // instead of trying to split cover/separator/list regions.
+    if !show_cover || inner.width < MIN_COVER_LAYOUT_WIDTH || inner.height < MIN_COVER_LAYOUT_HEIGHT {
+        return list_only_layout(inner);
     }
 
     // Layout: cover (1/3) + 1-line separator + list (rest)
@@ -446,5 +456,54 @@ pub fn render(f: &mut Frame, area: Rect, app: &mut AppState) {
     render_album_cover(f, l.cover_area, app);
     render_separator(f, l.separator_area, app);
     render_playlist_list(f, l.list_area, app);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::state::AppState;
+    use crate::data::config::Config;
+    use crate::ui::theme::{ColorCapability, Theme, ThemeName, ThemePalette};
+
+    fn test_theme() -> Theme {
+        Theme {
+            name: ThemeName::System,
+            palette: ThemePalette {
+                text: (0, 0, 0),
+                subtext: (0, 0, 0),
+                base: (0, 0, 0),
+                surface: (0, 0, 0),
+                accent: (0, 0, 0),
+                accent2: (0, 0, 0),
+                accent3: (0, 0, 0),
+            },
+            capability: ColorCapability::NoColor,
+        }
+    }
+
+    fn test_app_state() -> AppState {
+        let mut app = AppState::new(Config::default(), test_theme());
+        app.player.mode = PlayMode::LocalPlayback;
+        app.local_folder_kind = LocalFolderKind::MultiAlbum;
+        app
+    }
+
+    #[test]
+    fn compute_layout_falls_back_when_inner_rect_is_zero() {
+        let app = test_app_state();
+        let layout = compute_layout(Rect { x: 0, y: 0, width: 1, height: 10 }, &app);
+
+        assert_eq!(layout.cover_area.height, 0);
+        assert_eq!(layout.list_area.height, 0);
+    }
+
+    #[test]
+    fn compute_layout_falls_back_when_panel_is_too_short_for_cover() {
+        let app = test_app_state();
+        let layout = compute_layout(Rect { x: 0, y: 0, width: 20, height: 8 }, &app);
+
+        assert_eq!(layout.cover_area.height, 0);
+        assert_eq!(layout.list_area.height, 6);
+    }
 }
 
