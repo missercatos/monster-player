@@ -18,6 +18,7 @@ pub enum PlayMode {
     Idle,
     LocalPlayback,
     SystemMonitor,
+    Streaming,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -223,6 +224,7 @@ pub enum Overlay {
     AcoustIdModal,
     HelpModal,
     EqModal,
+    AlbumBrowser,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -294,6 +296,14 @@ pub struct AppState {
     // Which album folder is currently being *viewed* in the playlist overlay.
     pub local_view_album_index: usize,
     pub local_view_album_folder: Option<PathBuf>,
+
+    // Streaming mode data
+    pub streaming_client: Option<crate::data::siren_api::Client>,
+    pub albums: Vec<crate::data::siren_api::Album>,
+    pub songs: Vec<crate::data::siren_api::Song>,
+    pub selected_album_index: usize,
+    pub selected_song_index: usize,
+    pub album_detail_scroll_offset: usize,
 
     // Album cover shown in the playlist overlay's top area.
     pub local_view_album_cover: Option<Vec<u8>>,
@@ -401,6 +411,13 @@ impl AppState {
             local_view_album_folder: None,
             local_view_album_cover: None,
             local_view_album_cover_hash: None,
+
+            streaming_client: None,
+            albums: Vec::new(),
+            songs: Vec::new(),
+            selected_album_index: 0,
+            selected_song_index: 0,
+            album_detail_scroll_offset: 0,
 
             playlist_album_anim: None,
 

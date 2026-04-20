@@ -1,4 +1,5 @@
 pub mod ascii_art;
+pub mod download;
 pub mod input;
 pub mod kitty;
 #[cfg(target_os = "linux")]

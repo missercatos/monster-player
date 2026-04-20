@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="logo.svg" alt="TMPlayer (TUI Music Player) Logo" width="256">
+  <img src="logo.svg" alt="Monster-Player (TUI Music Player with Streaming) Logo" width="256">
 </p>
 
-<h1 align="center">TMPlayer (TUI Music Player)</h1>
+<h1 align="center">Monster-Player (TUI Music Player with Streaming)</h1>
 
 <p align="center">
 	<a href="README.md">English</a>
@@ -11,23 +11,23 @@
 </p>
 
 <p align="center" style="color:gray;">
-	A Rust-based Linux TUI music player with spectrum visualization.
+	A Rust-based Linux TUI music player with spectrum visualization and Siren Records streaming support.
 </p>
 
 <p align="center">
 	<img src="https://img.shields.io/badge/Rust-2021-orange" alt="Rust">
 	<img src="https://img.shields.io/badge/Platform-Linux-informational" alt="Platform">
 	<img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="License">
-	<img src="https://img.shields.io/github/stars/professor-lee/TMPlayer?style=flat&label=Stars&color=FFC700&logo=github&logoColor=white" alt="Stars">
+	<img src="https://img.shields.io/badge/Version-0.2.4-green" alt="Version">
 </p>
 
 <h2 align="center">Project Overview</h2>
 
-This is a Linux terminal (TUI) music player built with Rust.
-It supports local playback and system monitoring, and includes spectrum visualization.
+This is a Linux terminal (TUI) music player based on TMPlayer, extended with Siren Records (塞壬唱片) streaming support.
+It supports local playback, system monitoring, streaming from Siren Records, and includes spectrum visualization.
 
 <p align="center">
-	<img src="overview.png" alt="TMPlayer (TUI Music Player) Overview">
+	<img src="overview.png" alt="Monster-Player (TUI Music Player with Streaming) Overview">
 </p>
 
 <h2 align="center">Features</h2>
@@ -36,6 +36,7 @@ It supports local playback and system monitoring, and includes spectrum visualiz
 - Local Audio Playback Mode Changes (Playlist Loop / Single Track Loop / Sequential Playback / Shuffle)
 - Local Audio Equalizer Support
 - System playback monitoring (MPRIS)
+- **Siren Records streaming playback** (album browser interface, song selection, streaming from Siren Records API)
 - Playlist panel
 - Album cover rendering: ASCII art (default) or Kitty graphics (optional, if supported)
 - Settings modal (theme, transparent background, album border, visualization mode, Bar settings, Kitty graphics toggle, cover quality, Local audio settings for lyrics/cover fetch & download, audio fingerprinting, AcoustID API key, resume last position, About)
@@ -49,8 +50,9 @@ It supports local playback and system monitoring, and includes spectrum visualiz
 
 - Rust 2021
 - TUI: ratatui + crossterm
-- Playback: rodio (local), MPRIS (system)
+- Playback: rodio (local), MPRIS (system), ureq (streaming)
 - Visualization: `cava` (external bars)
+- Streaming API: Siren Records (塞壬唱片) API client
 
 <h2 align="center">Development Setup</h2>
 
@@ -72,50 +74,70 @@ Icon mapping:
 - Sequential: 
 > Oops, GitHub doesn't seem to support displaying Nerd Font. You can check the icons at https://www.nerdfonts.com/cheat-sheet.
 
-### Requirements (Linux)
+### Quick Installation (Arch Linux)
 
-Install build dependencies (names may vary by distro):
-
-```bash
-sudo apt update
-sudo apt install -y pkg-config libasound2-dev libdbus-1-dev libchromaprint-dev
-```
-
-### Installation
-
-#### Arch Linux (AUR)
-
-You can install it from the AUR:
+For a quick installation on Arch Linux, run the included installation script:
 
 ```bash
-# Using an AUR helper (e.g., yay)
-yay -S tmplayer
+# Clone the repository (if not already done)
+git clone <repository-url>
+cd monster-player
 
-# Or manually
-git clone https://github.com/professor-lee/TMPlayer.git
-cd TMPlayer/AUR
-makepkg -si
+# Run the installation script
+./make-si.sh
 ```
 
-### Run
+After installation, run Monster-Player with:
 
-If installed via AUR, simply run:
+```bash
+monsterplayer
+```
+
+Or using the original name:
 
 ```bash
 tmplayer
 ```
 
-For development:
+### Manual Installation
+
+#### Dependencies (Arch Linux)
+
+Install required dependencies:
 
 ```bash
-cargo run
+sudo pacman -S pkg-config alsa-lib dbus libchromaprint cava base-devel
 ```
 
-### Release build
+#### Rust Toolchain
+
+If Rust is not installed:
 
 ```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+```
+
+#### Build and Install
+
+```bash
+# Build the project
 cargo build --release
-./target/release/tmplayer
+
+# Install binary
+sudo cp target/release/tmplayer /usr/local/bin/monsterplayer
+sudo chmod +x /usr/local/bin/monsterplayer
+
+# Optional: Create symlink for backward compatibility
+sudo ln -sf /usr/local/bin/monsterplayer /usr/local/bin/tmplayer
+```
+
+### Uninstallation
+
+To uninstall Monster-Player:
+
+```bash
+./uninstall.sh
 ```
 
 On first run, the app will create (if missing) its config + theme files under your OS config directory.
@@ -262,15 +284,15 @@ Open the in-app help at any time with `Ctrl+K`.
 |---|---|
 | `Ctrl+F` | Open folder input |
 | `P` | Toggle playlist |
+| `M` | Toggle album browser (Siren Records streaming) |
 | `Space` | Play/Pause |
 | `Left` / `Right` | Prev / Next |
 | `Up` / `Down` | Volume up / down |
 | `E` | Open the equalizer (local) |
 | `Alt+R` | Reset equalizer to default (in EQ modal) |
-| `M` | Toggle repeat mode (local) |
 | `T` | Open Settings |
 | `Ctrl+K` | Open Keys (help) |
-| `Enter` | Confirm (folder input / playlist) |
+| `Enter` | Confirm (folder input / playlist / album browser) |
 | `Q` | Quit |
 | `Esc` | Close overlays/modals |
 
@@ -281,18 +303,13 @@ When the playlist is open:
 | `Ctrl+Up` / `Ctrl+Down` | Move selected item up / down |
 | `Ctrl+Left` / `Ctrl+Right` | Prev / Next album (MultiAlbum) |
 
----
+When the album browser is open (Siren Records):
 
-### License
+| Key | Action |
+|---|---|
+| `N` / `P` or `Up` / `Down` | Select next / previous album |
+| `Left` / `Right` | Select previous / next song in current album |
+| `Enter` | Play selected song (streaming) |
+| `Q` or `Esc` | Close album browser |
 
-[AGPL-3.0 license](LICENSE)
 
-Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-
----
-## Star History
-
-[![Star History Chart](https://api.star-history.com/image?repos=professor-lee/TMPlayer&type=date&legend=top-left)](https://www.star-history.com/?repos=professor-lee%2FTMPlayer&type=date&legend=top-left)
-
-## Stone Badge
-![Stone Badge](https://stone.professorlee.work/api/stone/professor-lee/TMPlayer)

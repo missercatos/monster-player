@@ -1,0 +1,74 @@
+use anyhow::{anyhow, Result};
+use rodio::{OutputStream, Sink, Source};
+use symphonia::core::audio::SampleBuffer;
+use symphonia::core::codecs::DecoderOptions;
+use symphonia::core::formats::FormatOptions;
+use symphonia::core::io::MediaSourceStream;
+use symphonia::core::meta::MetadataOptions;
+use symphonia::core::probe::Hint;
+use std::io::Read;
+use std::time::Duration;
+
+pub struct StreamingPlayer {
+    sink: Sink,
+    _stream: OutputStream,
+}
+
+impl StreamingPlayer {
+    pub fn new() -> Result<Self> {
+        let (stream, handle) = OutputStream::try_default()?;
+        let sink = Sink::try_new(&handle)?;
+        Ok(Self {
+            sink,
+            _stream: stream,
+        })
+    }
+
+    pub fn play_url(&self, url: &str) -> Result<()> {
+        // 使用 ureq 获取 HTTP 流
+        let resp = ureq::get(url)
+            .set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
+            .call()
+            .map_err(|e| anyhow!("HTTP请求失败: {}", e))?;
+        
+        if resp.status() != 200 {
+            return Err(anyhow!("HTTP错误: {}", resp.status()));
+        }
+
+        // 将响应体读入内存（对于流媒体可能很大，但暂时这样处理）
+        let mut reader = resp.into_reader();
+        let mut data = Vec::new();
+        reader.read_to_end(&mut data)?;
+
+        // 使用 symphonia 解码
+        let mss = MediaSourceStream::new(Box::new(std::io::Cursor::new(data)), Default::default());
+        let hint = Hint::new();
+        let format_opts = FormatOptions::default();
+        let metadata_opts = MetadataOptions::default();
+        let decoder_opts = DecoderOptions::default();
+
+        let probed = symphonia::default::get_probe()
+            .format(&hint, mss, &format_opts, &metadata_opts)
+            .map_err(|e| anyhow!("探测音频格式失败: {}", e))?;
+
+        let mut format = probed.format;
+        let track = format.default_track().ok_or_else(|| anyhow!("没有音轨"))?;
+        let track_id = track.id;
+
+        let mut decoder = symphonia::default::get_codecs()
+            .make(&track.codec_params, &decoder_opts)
+            .map_err(|e| anyhow!("创建解码器失败: {}", e))?;
+
+        // 解码并播放（简化：将所有样本推送到 sink）
+        // 注意：这可能会阻塞，实际应该在一个单独的线程中解码并流式传输到 sink。
+        // 暂时先这样实现。
+        let sample_rate = track.codec_params.sample_rate.unwrap_or(44100);
+        let channels = track.codec_params.channels.unwrap_or(symphonia::core::audio::Channels::FRONT_LEFT);
+
+        // 创建 sink 并添加解码后的样本
+        // 我们需要将解码后的样本转换为 rodio 的 Source
+        // 由于时间有限，暂时跳过实际播放。
+        // 待实现
+        Err(anyhow!("流媒体播放尚未实现"))
+    }
+}

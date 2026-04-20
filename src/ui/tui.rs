@@ -12,6 +12,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use ratatui::Terminal;
+use ratatui::Frame;
 use std::io::{self, Stdout};
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc;
@@ -301,6 +302,7 @@ impl Tui {
                 Overlay::AcoustIdModal => render_acoustid_modal(f, size, app),
                 Overlay::HelpModal => render_help_modal(f, size, app),
                 Overlay::EqModal => render_eq_modal(f, size, app),
+                Overlay::AlbumBrowser => render_album_browser(f, size, app),
                 _ => {}
             }
         })?;
@@ -1431,6 +1433,122 @@ fn ratio_in_bar(r: Rect, col: u16) -> f32 {
     let inner = (r.width - 2) as f32;
     let x = col.saturating_sub(r.x + 1) as f32;
     (x / inner).clamp(0.0, 1.0)
+}
+
+fn render_album_browser(f: &mut Frame, area: Rect, app: &mut AppState) {
+    use ratatui::layout::{Constraint, Direction, Layout};
+    use ratatui::style::{Style, Modifier};
+    use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+    use ratatui::text::{Line, Span};
+
+    // 左右分栏：左侧40%，右侧60%
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+        .split(area);
+
+    let left_area = chunks[0];
+    let right_area = chunks[1];
+
+    // 左侧专辑列表
+    let albums = &app.albums;
+    let selected_idx = app.selected_album_index;
+    let title_style = Style::default().fg(app.theme.color_text());
+    let selected_style = Style::default().fg(app.theme.color_accent()).add_modifier(Modifier::BOLD);
+    let normal_style = Style::default().fg(app.theme.color_subtext());
+
+    let mut album_lines = Vec::new();
+    for (i, album) in albums.iter().enumerate() {
+        let is_selected = i == selected_idx;
+        let style = if is_selected { selected_style } else { normal_style };
+        let prefix = if is_selected { "▶ " } else { "  " };
+        let line = Line::from(vec![
+            Span::styled(prefix, style),
+            Span::styled(&album.name, style),
+        ]);
+        album_lines.push(line);
+    }
+
+    let album_list = Paragraph::new(album_lines)
+        .block(Block::default().borders(Borders::ALL).title("专辑列表"))
+        .style(title_style)
+        .wrap(Wrap { trim: true });
+    f.render_widget(album_list, left_area);
+
+    // 右侧专辑详情
+    if let Some(album) = albums.get(selected_idx) {
+        // 计算右侧区域内部高度（减去边框和标题）
+        let inner_right = right_area.inner(&ratatui::layout::Margin { horizontal: 1, vertical: 1 });
+        // 每首歌曲占用一行，加上标题行和元数据行
+        let meta_lines = 4; // 专辑名、ID、艺术家、空行
+        let title_line = 1; // "歌曲列表"标题
+        let available_lines = inner_right.height.saturating_sub(meta_lines + title_line);
+        
+        // 获取该专辑的歌曲
+        let album_songs: Vec<_> = app.songs.iter()
+            .filter(|song| song.album_cid == album.cid)
+            .collect();
+        
+        // 自适应字体大小：如果歌曲行数超过可用行数，使用更紧凑的显示（缩小字号不可行，这里我们启用滚动）
+        // 调整滚动偏移使选中歌曲可见
+        if !album_songs.is_empty() && available_lines > 0 {
+            let selected = app.selected_song_index.min(album_songs.len() - 1);
+            // 计算当前滚动偏移下的可见范围
+            let start = app.album_detail_scroll_offset;
+            let end = start + available_lines as usize;
+            if selected < start {
+                app.album_detail_scroll_offset = selected;
+            } else if selected >= end {
+                app.album_detail_scroll_offset = selected.saturating_sub(available_lines as usize) + 1;
+            }
+            // 确保滚动偏移有效
+            let max_scroll = album_songs.len().saturating_sub(available_lines as usize).max(0);
+            if app.album_detail_scroll_offset > max_scroll {
+                app.album_detail_scroll_offset = max_scroll;
+            }
+        } else {
+            app.album_detail_scroll_offset = 0;
+        }
+
+        let mut info_lines = Vec::new();
+        info_lines.push(Line::from(Span::styled(&album.name, selected_style)));
+        info_lines.push(Line::from(Span::styled(format!("ID: {}", album.cid), normal_style)));
+        if !album.artistes.is_empty() {
+            info_lines.push(Line::from(Span::styled(format!("艺术家: {}", album.artistes.join(", ")), normal_style)));
+        }
+        info_lines.push(Line::from(""));
+
+        info_lines.push(Line::from(Span::styled(format!("歌曲列表 ({}首)", album_songs.len()), title_style)));
+        for (i, song) in album_songs.iter().enumerate() {
+            // 如果歌曲过多，启用滚动后只显示可见部分（通过滚动偏移）
+            if i >= app.album_detail_scroll_offset && i < app.album_detail_scroll_offset + available_lines as usize {
+                let song_line = if i == app.selected_song_index {
+                    format!("▶ {} - {}", song.name, song.artists.join(", "))
+                } else {
+                    format!("  {} - {}", song.name, song.artists.join(", "))
+                };
+                info_lines.push(Line::from(Span::styled(song_line, normal_style)));
+            }
+        }
+
+        // 如果歌曲总数超过可用行数，显示滚动指示
+        if album_songs.len() > available_lines as usize {
+            let scroll_indicator = format!("（滚动: {}/{}）", app.album_detail_scroll_offset + 1, album_songs.len());
+            info_lines.push(Line::from(Span::styled(scroll_indicator, normal_style)));
+        }
+
+        let album_detail = Paragraph::new(info_lines)
+            .block(Block::default().borders(Borders::ALL).title("专辑详情"))
+            .style(normal_style)
+            .wrap(Wrap { trim: true })
+            .scroll((app.album_detail_scroll_offset as u16, 0));
+        f.render_widget(album_detail, right_area);
+    } else {
+        let no_album = Paragraph::new("请选择专辑")
+            .block(Block::default().borders(Borders::ALL).title("专辑详情"))
+            .style(normal_style);
+        f.render_widget(no_album, right_area);
+    }
 }
 
 fn ratio_in_track(r: Rect, col: u16) -> f32 {

@@ -568,6 +568,7 @@ fn mode_label(m: PlayMode) -> &'static str {
         PlayMode::Idle => "Idle",
         PlayMode::LocalPlayback => "Local",
         PlayMode::SystemMonitor => "System",
+        PlayMode::Streaming => "Streaming",
     }
 }
 

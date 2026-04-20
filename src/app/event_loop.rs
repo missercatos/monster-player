@@ -163,6 +163,18 @@ pub fn run(app: &mut AppState) -> Result<()> {
             ensure_bar_buffers(app, bars);
         }
 
+        // update streaming playback state
+        if app.player.mode == PlayMode::Streaming {
+            app.player.playback = if mode_manager.streaming.is_paused() {
+                crate::app::state::PlaybackState::Paused
+            } else if mode_manager.streaming.empty() {
+                crate::app::state::PlaybackState::Stopped
+            } else {
+                crate::app::state::PlaybackState::Playing
+            };
+            // position unknown, keep as zero
+        }
+
         // mpris poll
         if frame_start.duration_since(last_mpris) >= Duration::from_millis(app.config.mpris_poll_ms) {
             last_mpris = frame_start;
@@ -453,6 +465,43 @@ fn handle_action(
                 app.close_overlay();
             }
         }
+        Action::ToggleAlbumBrowser => {
+            if app.overlay == Overlay::AlbumBrowser {
+                app.overlay = Overlay::None;
+            } else {
+                // 进入专辑浏览界面
+                // 如果尚未加载数据，则初始化流媒体客户端并加载数据
+                if app.streaming_client.is_none() {
+                    app.streaming_client = Some(crate::data::siren_api::Client::new());
+                }
+                // 尝试同步加载数据
+                // 先获取结果，然后更新 app 状态，以避免借用冲突
+                let albums_result = app.streaming_client.as_ref().map(|c| c.get_albums());
+                let songs_result = app.streaming_client.as_ref().map(|c| c.get_songs());
+                if let Some(res) = albums_result {
+                    match res {
+                        Ok(albums) => app.albums = albums,
+                        Err(e) => {
+                            app.set_toast(format!("加载专辑列表失败: {}", e));
+                            app.albums.clear();
+                        }
+                    }
+                }
+                if let Some(res) = songs_result {
+                    match res {
+                        Ok(songs) => app.songs = songs,
+                        Err(e) => {
+                            app.set_toast(format!("加载歌曲列表失败: {}", e));
+                            app.songs.clear();
+                        }
+                    }
+                }
+                app.overlay = Overlay::AlbumBrowser;
+                app.selected_album_index = 0;
+                app.selected_song_index = 0;
+                app.album_detail_scroll_offset = 0;
+            }
+        }
         Action::TogglePlaylist => {
             if app.overlay == Overlay::Playlist {
                 app.playlist_slide_target_x = -(layout.left_width as i16);
@@ -642,6 +691,50 @@ fn handle_action(
                 Overlay::EqModal => {
                     app.close_overlay();
                 }
+                Overlay::AlbumBrowser => {
+                    // 播放选中的歌曲
+                    let album = app.albums.get(app.selected_album_index);
+                    if let Some(album) = album {
+                        let album_songs: Vec<_> = app.songs.iter()
+                            .filter(|song| song.album_cid == album.cid)
+                            .collect();
+                        if let Some(song) = album_songs.get(app.selected_song_index) {
+                            // 获取歌曲详情并播放
+                            if let Some(client) = &app.streaming_client {
+                                match client.get_song_detail(&song.cid) {
+                                    Ok(detail) => {
+                                        // 调用流媒体播放器播放
+                                        mode_manager.pause_other(PlayMode::Streaming);
+                                        match mode_manager.streaming.play_url(&detail.source_url) {
+                                            Ok(_) => {
+                                                app.player.mode = PlayMode::Streaming;
+                                                app.player.playback = crate::app::state::PlaybackState::Playing;
+                                                app.player.volume = mode_manager.streaming.volume();
+                                                app.player.track = crate::app::state::TrackMetadata {
+                                                    title: song.name.clone(),
+                                                    artist: song.artists.join(", "),
+                                                    album: album.name.clone(),
+                                                    duration: Duration::from_secs(0), // 未知时长
+                                                    cover: None,
+                                                    cover_hash: None,
+                                                    cover_folder: None,
+                                                    lyrics: None,
+                                                };
+                                                app.set_toast(format!("正在播放: {} - {}", song.name, song.artists.join(", ")));
+                                            }
+                                            Err(e) => {
+                                                app.set_toast(format!("播放失败: {}", e));
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        app.set_toast(format!("获取歌曲详情失败: {}", e));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 _ => {}
             }
         }
@@ -774,6 +867,14 @@ fn handle_action(
                 if app.player.mode == PlayMode::LocalPlayback {
                     let _ = mode_manager.local.set_eq(app.eq);
                 }
+            } else if app.overlay == Overlay::AlbumBrowser {
+                if app.selected_album_index > 0 {
+                    app.selected_album_index -= 1;
+                } else {
+                    app.selected_album_index = app.albums.len().saturating_sub(1);
+                }
+                app.selected_song_index = 0;
+                app.album_detail_scroll_offset = 0;
             }
         }
         Action::ModalDown => {
@@ -797,6 +898,12 @@ fn handle_action(
                 if app.player.mode == PlayMode::LocalPlayback {
                     let _ = mode_manager.local.set_eq(app.eq);
                 }
+            } else if app.overlay == Overlay::AlbumBrowser {
+                if !app.albums.is_empty() {
+                    app.selected_album_index = (app.selected_album_index + 1) % app.albums.len();
+                }
+                app.selected_song_index = 0;
+                app.album_detail_scroll_offset = 0;
             }
         }
         Action::ModalLeft => {
@@ -835,6 +942,23 @@ fn handle_action(
                 } else {
                     app.eq_selected -= 1;
                 }
+            } else if app.overlay == Overlay::AlbumBrowser {
+                // 左箭头：歌曲选择上移
+                let album = app.albums.get(app.selected_album_index);
+                if let Some(album) = album {
+                    let album_songs: Vec<_> = app.songs.iter()
+                        .filter(|song| song.album_cid == album.cid)
+                        .collect();
+                    if !album_songs.is_empty() {
+                        if app.selected_song_index == 0 {
+                            app.selected_song_index = album_songs.len() - 1;
+                        } else {
+                            app.selected_song_index -= 1;
+                        }
+                        // 调整滚动偏移使选中歌曲可见
+                        // TODO: 实现滚动偏移调整
+                    }
+                }
             }
         }
         Action::ModalRight => {
@@ -869,6 +993,19 @@ fn handle_action(
             } else if app.overlay == Overlay::EqModal {
                 let count = crate::app::state::EQ_BANDS;
                 app.eq_selected = (app.eq_selected + 1) % count;
+            } else if app.overlay == Overlay::AlbumBrowser {
+                // 右箭头：歌曲选择下移
+                let album = app.albums.get(app.selected_album_index);
+                if let Some(album) = album {
+                    let album_songs: Vec<_> = app.songs.iter()
+                        .filter(|song| song.album_cid == album.cid)
+                        .collect();
+                    if !album_songs.is_empty() {
+                        app.selected_song_index = (app.selected_song_index + 1) % album_songs.len();
+                        // 调整滚动偏移使选中歌曲可见
+                        // TODO: 实现滚动偏移调整
+                    }
+                }
             }
         }
         Action::PlaylistSelect(idx) => {
@@ -911,6 +1048,9 @@ fn handle_action(
                 PlayMode::SystemMonitor => {
                     let _ = mode_manager.mpris.toggle_play_pause();
                 }
+                PlayMode::Streaming => {
+                    mode_manager.streaming.toggle_play_pause();
+                }
                 PlayMode::Idle => {}
             }
         }
@@ -944,6 +1084,7 @@ fn handle_action(
                 app.pending_system_cover_anim = Some((CoverSnapshot::from(&app.player.track), 1, Instant::now()));
                 let _ = mode_manager.mpris.prev();
             }
+            PlayMode::Streaming => {},
             PlayMode::Idle => {}
         },
         Action::Next => match app.player.mode {
@@ -976,6 +1117,7 @@ fn handle_action(
                 app.pending_system_cover_anim = Some((CoverSnapshot::from(&app.player.track), -1, Instant::now()));
                 let _ = mode_manager.mpris.next();
             }
+            PlayMode::Streaming => {},
             PlayMode::Idle => {}
         },
         Action::VolumeUp => match app.player.mode {
@@ -993,6 +1135,11 @@ fn handle_action(
                     let _ = mode_manager.mpris.set_volume_delta(0.05);
                 }
             }
+            PlayMode::Streaming => {
+                let new_vol = (mode_manager.streaming.volume() + 0.05).min(1.0);
+                mode_manager.streaming.set_volume(new_vol);
+                app.player.volume = new_vol;
+            }
             PlayMode::Idle => {}
         },
         Action::VolumeDown => match app.player.mode {
@@ -1009,6 +1156,11 @@ fn handle_action(
                 } else {
                     let _ = mode_manager.mpris.set_volume_delta(-0.05);
                 }
+            }
+            PlayMode::Streaming => {
+                let new_vol = (mode_manager.streaming.volume() - 0.05).max(0.0);
+                mode_manager.streaming.set_volume(new_vol);
+                app.player.volume = new_vol;
             }
             PlayMode::Idle => {}
         },
@@ -1030,6 +1182,10 @@ fn handle_action(
                     let cur = app.player.volume;
                     let _ = mode_manager.mpris.set_volume_delta(v - cur);
                 }
+            }
+            PlayMode::Streaming => {
+                mode_manager.streaming.set_volume(v);
+                app.player.volume = v;
             }
             PlayMode::Idle => {}
         },
@@ -1054,6 +1210,9 @@ fn handle_action(
                 }
                 PlayMode::SystemMonitor => {
                     let _ = mode_manager.mpris.seek_to(target);
+                }
+                PlayMode::Streaming => {
+                    // 流媒体暂不支持跳转
                 }
                 PlayMode::Idle => {}
             }

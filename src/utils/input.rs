@@ -12,6 +12,7 @@ pub enum Action {
     SetVolume(f32),
     ToggleRepeatMode,
     TogglePlaylist,
+    ToggleAlbumBrowser,
     Confirm,
     CloseOverlay,
     OpenFolder,
@@ -178,6 +179,21 @@ pub fn map_key(ev: KeyEvent, overlay: Overlay) -> Action {
         }
     }
 
+    if overlay == Overlay::AlbumBrowser {
+        return match ev.code {
+            KeyCode::Char('q') | KeyCode::Char('Q') => Action::CloseOverlay,
+            KeyCode::Char('n') | KeyCode::Char('N') => Action::ModalDown,
+            KeyCode::Char('p') | KeyCode::Char('P') => Action::ModalUp,
+            KeyCode::Esc => Action::CloseOverlay,
+            KeyCode::Enter => Action::Confirm,
+            KeyCode::Up => Action::ModalUp,
+            KeyCode::Down => Action::ModalDown,
+            KeyCode::Left => Action::ModalLeft,
+            KeyCode::Right => Action::ModalRight,
+            _ => Action::None,
+        };
+    }
+
     if overlay == Overlay::Playlist {
         return match ev.code {
             KeyCode::Char('q') | KeyCode::Char('Q') => Action::Quit,
@@ -219,7 +235,7 @@ pub fn map_key(ev: KeyEvent, overlay: Overlay) -> Action {
     match ev.code {
         KeyCode::Char('q') | KeyCode::Char('Q') => Action::Quit,
         KeyCode::Char('p') | KeyCode::Char('P') => Action::TogglePlaylist,
-        KeyCode::Char('m') | KeyCode::Char('M') => Action::ToggleRepeatMode,
+        KeyCode::Char('m') | KeyCode::Char('M') => Action::ToggleAlbumBrowser,
         KeyCode::Esc => Action::CloseOverlay,
         KeyCode::Enter => Action::Confirm,
         KeyCode::Left => Action::Prev,
