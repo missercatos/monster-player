@@ -113,16 +113,25 @@ fi
 
 # Step 7: Install binary
 echo -e "${BLUE}Installing binary to /usr/local/bin/...${NC}"
-if [[ -f "target/release/tmplayer" ]]; then
-    sudo cp target/release/tmplayer /usr/local/bin/monsterplayer
+if [[ -f "target/release/monsterplayer" ]]; then
+    sudo cp target/release/monsterplayer /usr/local/bin/monsterplayer
     sudo chmod +x /usr/local/bin/monsterplayer
     print_status "Binary installed as 'monsterplayer'"
     
     # Create a symlink for backward compatibility
     sudo ln -sf /usr/local/bin/monsterplayer /usr/local/bin/tmplayer
     print_status "Created symlink 'tmplayer' for backward compatibility"
+elif [[ -f "target/release/tmplayer" ]]; then
+    # Fallback for old crate name
+    sudo cp target/release/tmplayer /usr/local/bin/monsterplayer
+    sudo chmod +x /usr/local/bin/monsterplayer
+    print_status "Binary installed as 'monsterplayer' (from tmplayer)"
+    
+    # Create a symlink for backward compatibility
+    sudo ln -sf /usr/local/bin/monsterplayer /usr/local/bin/tmplayer
+    print_status "Created symlink 'tmplayer' for backward compatibility"
 else
-    print_error "Built binary not found at target/release/tmplayer"
+    print_error "Built binary not found at target/release/monsterplayer or target/release/tmplayer"
     exit 1
 fi
 

@@ -1,5 +1,5 @@
 [package]
-name = "tmplayer"
+name = "monster-player"
 version = "0.2.4"
 edition = "2021"
 build = "build.rs"
@@ -37,6 +37,10 @@ chromaprint = "0.2"
 [target.'cfg(target_os = "linux")'.dependencies]
 mpris = "2.0"
 alsa = "0.9"
+
+[[bin]]
+name = "monsterplayer"
+path = "src/main.rs"
 
 [build-dependencies]
 anyhow = "1"

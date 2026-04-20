@@ -32,7 +32,15 @@ check() {
 
 package() {
   cd "$pkgname-$pkgver"
-  install -Dm755 "target/release/tmplayer" "$pkgdir/usr/bin/monsterplayer"
+  # Try new binary name first, fallback to old name
+  if [[ -f "target/release/monsterplayer" ]]; then
+    install -Dm755 "target/release/monsterplayer" "$pkgdir/usr/bin/monsterplayer"
+  elif [[ -f "target/release/tmplayer" ]]; then
+    install -Dm755 "target/release/tmplayer" "$pkgdir/usr/bin/monsterplayer"
+  else
+    echo "ERROR: Binary not found at target/release/{monsterplayer,tmplayer}"
+    exit 1
+  fi
   ln -s monsterplayer "$pkgdir/usr/bin/tmplayer"
   
   # desktop entry
