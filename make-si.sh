@@ -67,7 +67,7 @@ echo -e "${BLUE}Installing build dependencies...${NC}"
 install_package "pkg-config"
 install_package "alsa-lib"
 install_package "dbus"
-install_package "libchromaprint"
+install_package "chromaprint"
 install_package "cava"  # For spectrum visualization
 install_package "base-devel"  # For building
 
