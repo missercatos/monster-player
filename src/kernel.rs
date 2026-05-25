@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::Read;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use crate::api::client::Client;
@@ -13,6 +14,15 @@ pub enum PlayMode {
     GlobalList,
     GlobalRandom,
     Single,
+    LoveList,
+    LoveRandom,
+}
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct LovedEntry {
+    pub cid: String,
+    pub name: String,
+    pub artists: Vec<String>,
 }
 
 pub struct Engine {
@@ -29,6 +39,7 @@ pub struct Engine {
     pub play_mode: PlayMode,
     pub current_song_name: Option<String>,
     pub current_song_cid: Option<String>,
+    pub current_song_index: Option<usize>,
     pub song_info: Option<String>,
     pub album_intro: Option<String>,
     pub buffering: bool,
@@ -38,7 +49,11 @@ pub struct Engine {
     pub lyric_index: usize,
     pub progress: Option<f64>,
 
+    pub loved_cids: HashMap<String, LovedEntry>,
+    pub loved_list: Vec<LovedEntry>,
+
     wav_data: Option<Vec<u8>>,
+    loved_path: PathBuf,
 
     detail_cache: Arc<Mutex<HashMap<String, AlbumDetail>>>,
     detail_pending: Option<Arc<Mutex<Option<Result<AlbumDetail, String>>>>>,
@@ -53,6 +68,17 @@ pub struct Engine {
 
 impl Engine {
     pub fn new() -> Self {
+        let proj_dirs =
+            directories::ProjectDirs::from("com", "msplayer", "msplayer")
+                .expect("failed to get project dirs");
+        let mut config_dir = proj_dirs.config_dir().to_path_buf();
+        std::fs::create_dir_all(&config_dir).ok();
+        config_dir.push("loved.json");
+        let loved_path = config_dir;
+
+        let loved_entries = Self::load_loved_entries(&loved_path);
+        let loved_list: Vec<LovedEntry> = loved_entries.values().cloned().collect();
+
         Self {
             albums: Vec::new(),
             album_index: 0,
@@ -66,6 +92,7 @@ impl Engine {
             play_mode: PlayMode::AlbumList,
             current_song_name: None,
             current_song_cid: None,
+            current_song_index: None,
             song_info: None,
             album_intro: None,
             buffering: false,
@@ -74,6 +101,9 @@ impl Engine {
             lyric_index: 0,
             progress: None,
             wav_data: None,
+            loved_cids: loved_entries,
+            loved_list,
+            loved_path,
             detail_cache: Arc::new(Mutex::new(HashMap::new())),
             detail_pending: None,
             albums_pending: None,
@@ -95,15 +125,31 @@ impl Engine {
         self.check_song();
         self.check_wav();
         self.update_lyric_index();
+        self.auto_advance();
     }
 
     pub fn play_song_at(&mut self, index: usize) {
-        if self.songs.is_empty() {
-            return;
-        }
-        let cid = self.songs[index].cid.clone();
+        let is_love = matches!(self.play_mode, PlayMode::LoveList | PlayMode::LoveRandom);
 
-        let cached = self.song_cache.lock().unwrap().get(&cid).cloned();
+        if is_love {
+            if self.loved_list.is_empty() {
+                return;
+            }
+            self.current_song_index = Some(index);
+            let cid = self.loved_list[index].cid.clone();
+            self.play_cid(&cid);
+        } else {
+            if self.songs.is_empty() {
+                return;
+            }
+            self.current_song_index = Some(index);
+            let cid = self.songs[index].cid.clone();
+            self.play_cid(&cid);
+        }
+    }
+
+    fn play_cid(&mut self, cid: &str) {
+        let cached = self.song_cache.lock().unwrap().get(cid).cloned();
         if let Some(song) = cached {
             self.start_playback(&song);
             return;
@@ -111,11 +157,12 @@ impl Engine {
         if self.song_pending.is_some() {
             return;
         }
+        let cid_owned = cid.to_string();
         let pending = Arc::new(Mutex::new(None));
         let p = pending.clone();
         std::thread::spawn(move || {
             let client = Client::new();
-            let result = client.song_detail(&cid).map_err(|e| e.to_string());
+            let result = client.song_detail(&cid_owned).map_err(|e| e.to_string());
             *p.lock().unwrap() = Some(result);
         });
         self.song_pending = Some(pending);
@@ -153,7 +200,9 @@ impl Engine {
             PlayMode::AlbumRandom => PlayMode::GlobalList,
             PlayMode::GlobalList => PlayMode::GlobalRandom,
             PlayMode::GlobalRandom => PlayMode::Single,
-            PlayMode::Single => PlayMode::AlbumList,
+            PlayMode::Single => PlayMode::LoveList,
+            PlayMode::LoveList => PlayMode::LoveRandom,
+            PlayMode::LoveRandom => PlayMode::AlbumList,
         };
     }
 
@@ -197,6 +246,57 @@ impl Engine {
             if let Err(e) = player.play_bytes_at(data.clone(), 0.0) {
                 eprintln!("restart: {e}");
             }
+        }
+    }
+
+    pub fn is_loved(&self, cid: &str) -> bool {
+        self.loved_cids.contains_key(cid)
+    }
+
+    pub fn toggle_love(&mut self, cid: &str, name: &str, artists: &[String]) {
+        if self.loved_cids.contains_key(cid) {
+            self.loved_cids.remove(cid);
+        } else {
+            self.loved_cids.insert(
+                cid.to_string(),
+                LovedEntry {
+                    cid: cid.to_string(),
+                    name: name.to_string(),
+                    artists: artists.to_vec(),
+                },
+            );
+        }
+        self.save_loved();
+        self.loved_list = self.loved_cids.values().cloned().collect();
+    }
+
+    pub fn rebuild_loved_list(&mut self) {
+        // Update loved entries with fresh data from cache
+        let cache = self.song_cache.lock().unwrap();
+        for entry in self.loved_cids.values_mut() {
+            if let Some(song) = cache.get(&entry.cid) {
+                entry.name = song.name.clone();
+                entry.artists = song.artists.clone();
+            }
+        }
+        // Also check current album songs
+        for song in &self.songs {
+            if let Some(entry) = self.loved_cids.get_mut(&song.cid) {
+                entry.name = song.name.clone();
+                entry.artists = song.artistes.clone();
+            }
+        }
+        self.loved_list = self.loved_cids.values().cloned().collect();
+    }
+
+    fn load_loved_entries(path: &PathBuf) -> HashMap<String, LovedEntry> {
+        let data = std::fs::read_to_string(path).unwrap_or_default();
+        serde_json::from_str(&data).unwrap_or_default()
+    }
+
+    fn save_loved(&self) {
+        if let Ok(json) = serde_json::to_string(&self.loved_cids) {
+            std::fs::write(&self.loved_path, json).ok();
         }
     }
 
@@ -256,6 +356,7 @@ impl Engine {
                 self.songs = detail.songs.clone();
                 self.songs_loaded = true;
                 drop(cache);
+                self.rebuild_loved_list();
                 self.preload_adjacent();
                 self.preload_song_details();
                 return;
@@ -286,6 +387,7 @@ impl Engine {
                 Ok(detail) => {
                     self.songs = detail.songs.clone();
                     self.songs_loaded = true;
+                    self.rebuild_loved_list();
                     self.detail_cache
                         .lock()
                         .unwrap()
@@ -480,6 +582,53 @@ impl Engine {
                     }
                 }
                 self.lyric_index = idx;
+            }
+        }
+    }
+
+    fn auto_advance(&mut self) {
+        if !self.playing || self.buffering {
+            return;
+        }
+        let is_empty = self.player.as_ref().map_or(false, |p| p.is_empty());
+        if !is_empty {
+            return;
+        }
+
+        let is_love = matches!(self.play_mode, PlayMode::LoveList | PlayMode::LoveRandom);
+
+        match self.play_mode {
+            PlayMode::Single => {
+                self.playing = false;
+                self.current_song_name = None;
+                self.current_song_cid = None;
+                self.current_song_index = None;
+                self.song_info = None;
+                self.album_intro = None;
+                self.lyrics.clear();
+            }
+            PlayMode::LoveRandom | PlayMode::AlbumRandom | PlayMode::GlobalRandom => {
+                let len = if is_love {
+                    self.loved_list.len()
+                } else {
+                    self.songs.len()
+                };
+                if len > 0 {
+                    let next = fastrand::usize(..len);
+                    self.play_song_at(next);
+                }
+            }
+            _ => {
+                let current = self.current_song_index.unwrap_or(0);
+                let len = if is_love {
+                    self.loved_list.len()
+                } else {
+                    self.songs.len()
+                };
+                if len > 0 {
+                    let next = (current + 1) % len;
+                    self.play_song_at(next);
+                }
             }
         }
     }

@@ -106,6 +106,8 @@ fn draw_bottom(f: &mut Frame, app: &App, area: Rect) {
         PlayMode::GlobalList => "Global List",
         PlayMode::GlobalRandom => "Global Random",
         PlayMode::Single => "Single",
+        PlayMode::LoveList => "Love List",
+        PlayMode::LoveRandom => "Love Random",
     };
 
     let volume_str = format!("Volume: {}%", app.engine.volume);
@@ -123,6 +125,7 @@ fn draw_bottom(f: &mut Frame, app: &App, area: Rect) {
             "o           Volume -5%".into(),
             "p           Volume +5%".into(),
             "v           Toggle lyrics".into(),
+            "s           Toggle love on selected song".into(),
             "Ctrl+T      Toggle this help".into(),
         ]
     } else {
@@ -159,9 +162,91 @@ fn draw_bottom(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(p, centered_area);
 }
 
+fn draw_loved_view(f: &mut Frame, app: &App, area: Rect) {
+    let v_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(20), Constraint::Percentage(80)])
+        .split(area);
+
+    let header_lines = vec![Line::from(Span::styled(
+        format!("Loved Songs ({})", app.engine.loved_list.len()),
+        Style::default().fg(Color::Cyan),
+    ))];
+    let block = Block::default()
+        .borders(Borders::BOTTOM)
+        .border_style(Style::default().fg(Color::DarkGray));
+    let p = Paragraph::new(header_lines).block(block).centered();
+    f.render_widget(p, v_chunks[0]);
+
+    if app.engine.loved_list.is_empty() {
+        let text = vec![Line::from(Span::styled(
+            "No loved songs. Press S on a song to love it.",
+            Style::default().fg(Color::DarkGray),
+        ))];
+        let p = Paragraph::new(text).centered();
+        f.render_widget(p, v_chunks[1]);
+        return;
+    }
+
+    let max_display = (v_chunks[1].height as usize).saturating_sub(2);
+    let total = app.engine.loved_list.len();
+    let start = if total <= max_display {
+        0
+    } else {
+        let half = max_display / 2;
+        app.selected_song
+            .saturating_sub(half)
+            .min(total.saturating_sub(max_display))
+    };
+    let end = (start + max_display).min(total);
+
+    let mut lns: Vec<Line> = vec![];
+    for i in start..end {
+        let entry = &app.engine.loved_list[i];
+        let prefix = if i == app.selected_song { "> " } else { "  " };
+        let is_playing = app
+            .engine
+            .current_song_cid
+            .as_ref()
+            .map_or(false, |cid| cid == &entry.cid);
+
+        let color = if is_playing {
+            Color::Cyan
+        } else if i == app.selected_song {
+            Color::White
+        } else {
+            Color::Gray
+        };
+
+        let text = format!(
+            "{}{} - {}",
+            prefix,
+            entry.name,
+            entry.artists.join(", ")
+        );
+        lns.push(Line::from(vec![
+            Span::styled(text, Style::default().fg(color)),
+            Span::styled(" *", Style::default().fg(Color::Red)),
+        ]));
+    }
+
+    let p = Paragraph::new(lns);
+    f.render_widget(p, v_chunks[1]);
+}
+
 fn draw_right(f: &mut Frame, app: &App, area: Rect) {
     if app.show_lyrics {
         draw_lyrics(f, app, area);
+        return;
+    }
+
+    let is_love = matches!(
+        app.engine.play_mode,
+        PlayMode::LoveList | PlayMode::LoveRandom
+    );
+
+    if is_love {
+        draw_loved_view(f, app, area);
         return;
     }
 
@@ -255,8 +340,20 @@ fn draw_song_list(f: &mut Frame, app: &App, area: Rect) {
             Color::Gray
         };
 
-        let text = format!("{}{} - {}", prefix, song.name, song.artistes.join(", "));
-        lns.push(Line::from(Span::styled(text, Style::default().fg(color))));
+        let text = format!(
+            "{}{} - {}",
+            prefix,
+            song.name,
+            song.artistes.join(", ")
+        );
+        if app.engine.is_loved(&song.cid) {
+            lns.push(Line::from(vec![
+                Span::styled(text, Style::default().fg(color)),
+                Span::styled(" *", Style::default().fg(Color::Red)),
+            ]));
+        } else {
+            lns.push(Line::from(Span::styled(text, Style::default().fg(color))));
+        }
     }
 
     let p = Paragraph::new(lns);

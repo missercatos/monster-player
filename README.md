@@ -136,6 +136,7 @@ cargo run --release
 | `e` | 🔀 循环播放模式 |
 | `o`/`p` | 🔊 音量 -/+5% |
 | `v` | 🎤 歌词视图切换 |
+| `s` | ❤️ 收藏/取消收藏当前歌曲 |
 | `Ctrl+T` | ❓ 显示所有快捷键 |
 | `q` | 🚪 退出 |
 
@@ -249,6 +250,32 @@ monster-player/
 | `Engine::update_lyric_index()` | `kernel.rs:428` | 🎤 按播放进度匹配歌词行 |
 | `parse_lrc(text)` | `kernel.rs:444` | 📝 LRC 歌词解析 |
 | `handle_key(app, key)` | `tui/event.rs:15` | ⌨️ 按键分发映射 |
+| `Engine::toggle_love(cid)` | `kernel.rs:247` | ❤️ 收藏/取消收藏歌曲，写入 ~/.config/msplayer/loved.json |
+| `Engine::rebuild_loved_list()` | `kernel.rs:256` | 📋 从 song_cache + 当前专辑重建收藏列表 |
+| `Engine::load_loved(path)` | `kernel.rs:283` | 📂 启动时从 JSON 文件恢复收藏数据 |
+| `Engine::save_loved()` | `kernel.rs:292` | 💾 每次收藏变更时持久化写入 JSON |
+
+---
+
+### ❤️ 收藏系统
+
+- 按 `S` 键标记/取消收藏当前选中歌曲，红色 `*` 显示在歌曲名右侧
+- 收藏数据持久化到 `~/.config/msplayer/loved.json`（重启不丢失）
+- 播放模式新增 `Love List`（收藏列表循环）和 `Love Random`（收藏随机）
+- 进入 Love 模式时，右侧视图切换为 `Loved Songs (N)` 收藏歌曲列表
+
+```mermaid
+graph LR
+    AlbumList["Album List"]
+    AlbumRandom["Album Random"]
+    GlobalList["Global List"]
+    GlobalRandom["Global Random"]
+    Single["Single"]
+    LoveList["❤️ Love List"]
+    LoveRandom["❤️ Love Random"]
+
+    AlbumList --> AlbumRandom --> GlobalList --> GlobalRandom --> Single --> LoveList --> LoveRandom --> AlbumList
+```
 
 </details>
 

@@ -28,6 +28,7 @@ pub fn handle_key(app: &mut App, key: &KeyEvent) -> bool {
         KeyCode::Char('o') => app.volume_down(),
         KeyCode::Char('p') => app.volume_up(),
         KeyCode::Char('v') => app.toggle_lyrics(),
+        KeyCode::Char('s') => app.toggle_love(),
         KeyCode::Char('a') => {
             if shift {
                 app.prev_song();
