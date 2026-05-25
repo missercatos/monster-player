@@ -27,3 +27,7 @@ architecture_blueprint.mermaid
 temp/
 
 AUR/
+
+# Added by cargo
+
+/target
