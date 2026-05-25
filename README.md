@@ -6,24 +6,79 @@
 
 ## 🧠 哲学理念
 
+```mermaid
+graph TB
+    subgraph KERNEL["🎛️ kernel (内核)"]
+        direction LR
+        A["🔊 player<br/>音频播放"]
+        B["⚙️ engine<br/>数据管理"]
+        C["📡 api<br/>HTTP 数据模型"]
+    end
+
+    KERNEL --> TUI1
+    KERNEL --> TUI2
+    KERNEL --> GUI1
+
+    TUI1["🖥️ TUI A<br/>ratatui"]
+    TUI2["🖥️ TUI B<br/>(未来风格)"]
+    GUI1["🪟 GUI A<br/>egui"]
+
+    TUI1C["只管渲染 · 只管按键"]
+    TUI2C["只管渲染 · 只管按键"]
+    GUI1C["只管渲染 · 只管按键"]
+
+    TUI1 --- TUI1C
+    TUI2 --- TUI2C
+    GUI1 --- GUI1C
+
+    style KERNEL fill:#1a1a2e,stroke:#00ccff,color:#ffffff
+    style TUI1 fill:#0d2818,stroke:#00ff88,color:#ffffff
+    style TUI2 fill:#0d2818,stroke:#00ff88,color:#ffffff
+    style GUI1 fill:#2a1a0e,stroke:#ffaa00,color:#ffffff
+    style TUI1C fill:transparent,stroke:none,color:#aaaaaa
+    style TUI2C fill:transparent,stroke:none,color:#aaaaaa
+    style GUI1C fill:transparent,stroke:none,color:#aaaaaa
 ```
-┌──────────────────────────────────────────────────┐
-│                  🎛️ kernel (内核)                  │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
-│  │  player  │ │  engine  │ │  api / types     │ │
-│  │ 音频播放  │ │ 数据管理  │ │ HTTP 数据模型    │ │
-│  └──────────┘ └──────────┘ └──────────────────┘ │
-│         纯逻辑 · 零 UI 依赖 · 完全可复用           │
-└────────────────────┬─────────────────────────────┘
-                     │
-        ┌────────────┼────────────┐
-        │            │            │
-   ┌────▼────┐ ┌─────▼─────┐ ┌───▼──────┐
-   │  TUI A  │ │  TUI B    │ │  GUI A   │
-   │ ratatui │ │ (未来风格) │ │  egui    │
-   └─────────┘ └───────────┘ └──────────┘
-   只管渲染    只管渲染       只管渲染
-   只管按键    只管按键       只管按键
+
+> **一个内核，多个外皮。** UI 层只需关心渲染和按键映射，所有业务逻辑（播放控制、数据缓存、API 调用）由内核统一提供。
+
+---
+
+## 📂 项目结构
+
+```mermaid
+graph LR
+    subgraph SRC["src/"]
+        direction TB
+        LIB["📚 lib.rs<br/>库入口"]
+        MAIN["🚀 main.rs<br/>feature 分发"]
+        KERNEL2["🎛️ kernel.rs<br/>引擎核心 507行"]
+        PLAYER["🔊 player.rs<br/>音频播放器 146行"]
+        API["📡 api/<br/>HTTP 客户端 + 类型"]
+        ERROR["❌ error.rs<br/>错误类型 18行"]
+        ART["🖼️ ascii_art.rs<br/>字符画工具 27行"]
+        TUI["🖥️ tui/<br/>TUI 层 508行"]
+        GUI["🪟 origin_gui/<br/>GUI 原型 739行"]
+    end
+
+    MAIN -->|default feature| TUI
+    MAIN -->|gui feature| GUI
+    MAIN --> LIB
+    LIB --> KERNEL2
+    LIB --> PLAYER
+    LIB --> API
+    LIB --> ERROR
+    LIB --> ART
+
+    style SRC fill:transparent,stroke:#555,color:#fff
+    style LIB fill:#1a1a2e,stroke:#00ccff,color:#fff
+    style KERNEL2 fill:#1a1a2e,stroke:#00ccff,color:#fff
+    style PLAYER fill:#1a1a2e,stroke:#00ccff,color:#fff
+    style API fill:#1a1a2e,stroke:#00ccff,color:#fff
+    style ERROR fill:#1a1a2e,stroke:#00ccff,color:#fff
+    style ART fill:#1a1a2e,stroke:#00ccff,color:#fff
+    style TUI fill:#0d2818,stroke:#00ff88,color:#fff
+    style GUI fill:#2a1a0e,stroke:#ffaa00,color:#aaa
 ```
 
 > **一个内核，多个外皮。** UI 层只需关心渲染和按键映射，所有业务逻辑（播放控制、数据缓存、API 调用）由内核统一提供。
