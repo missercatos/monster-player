@@ -1,6 +1,5 @@
 use monster_player::kernel::{Engine, LovedEntry, PlayMode};
 
-/// TUI 应用状态：包装 Engine 内核 + UI 专属状态
 pub struct App {
     pub engine: Engine,
     pub show_help: bool,
@@ -10,7 +9,7 @@ pub struct App {
 }
 
 impl App {
-    /// 创建 Engine 实例
+    /// 初始化播放引擎，默认隐藏帮助与歌词，选中第一首歌
     pub fn new() -> Self {
         Self {
             engine: Engine::new(),
@@ -21,7 +20,7 @@ impl App {
         }
     }
 
-    /// 检测播放模式切换 + 调用 engine.update()
+    /// 驱动引擎更新，检测收藏列表/普通列表切换，同步 selected_song 归零
     pub fn update(&mut self) {
         let now_love = matches!(
             self.engine.play_mode,
@@ -34,28 +33,29 @@ impl App {
         self.engine.update();
     }
 
-    /// → engine.play_song_at(selected_song)
+    /// 播放当前选中的歌曲
     pub fn play_selected(&mut self) {
         self.engine.play_song_at(self.selected_song);
     }
 
-    /// → engine.toggle_pause()
+    /// 暂停 / 恢复播放
     pub fn toggle_pause(&mut self) {
         self.engine.toggle_pause();
     }
 
-    /// → engine.next_album()
+    /// 切换到下一张专辑，选中复位到第一首歌
     pub fn next_album(&mut self) {
         self.selected_song = 0;
         self.engine.next_album();
     }
 
-    /// → engine.prev_album()
+    /// 切换到上一张专辑，选中复位到第一首歌
     pub fn prev_album(&mut self) {
         self.selected_song = 0;
         self.engine.prev_album();
     }
 
+    /// 根据当前视图返回歌曲数量（收藏视图取 loved_list，否则取 songs）
     fn song_count(&self) -> usize {
         if self.is_love_view {
             self.engine.loved_list.len()
@@ -64,7 +64,7 @@ impl App {
         }
     }
 
-    /// 选中下移（支持回绕），单曲模式→ engine.restart_song()
+    /// 选中下一首歌，Single 模式则直接重播当前歌曲
     pub fn next_song(&mut self) {
         if matches!(self.engine.play_mode, PlayMode::Single) {
             self.engine.restart_song();
@@ -76,7 +76,7 @@ impl App {
         }
     }
 
-    /// 选中上移（支持回绕），单曲模式→ engine.restart_song()
+    /// 选中上一首歌，Single 模式则直接重播当前歌曲
     pub fn prev_song(&mut self) {
         if matches!(self.engine.play_mode, PlayMode::Single) {
             self.engine.restart_song();
@@ -84,7 +84,10 @@ impl App {
         }
         let len = self.song_count();
         if len > 0 {
-            self.selected_song = self.selected_song.checked_sub(1).unwrap_or(len - 1);
+            self.selected_song = self
+                .selected_song
+                .checked_sub(1)
+                .unwrap_or(len - 1);
         }
     }
 
@@ -130,54 +133,51 @@ impl App {
         }
     }
 
-    /// → engine.cycle_mode()
+    /// 循环切换播放模式（列表 → 随机 → 单曲 → …）
     pub fn cycle_mode(&mut self) {
         self.engine.cycle_mode();
     }
 
-    /// → engine.volume_up()
+    /// 增加音量
     pub fn volume_up(&mut self) {
         self.engine.volume_up();
     }
 
-    /// → engine.volume_down()
+    /// 降低音量
     pub fn volume_down(&mut self) {
         self.engine.volume_down();
     }
 
-    /// → engine.seek_forward()
+    /// 快进 5 秒
     pub fn seek_forward(&mut self) {
         self.engine.seek_forward();
     }
 
-    /// → engine.seek_backward()
+    /// 快退 5 秒
     pub fn seek_backward(&mut self) {
         self.engine.seek_backward();
     }
 
-    /// 切换帮助面板显示
+    /// 切换帮助面板的显示 / 隐藏
     pub fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
     }
 
-    /// 切换歌词面板显示
+    /// 切换歌词视图的显示 / 隐藏
     pub fn toggle_lyrics(&mut self) {
         self.show_lyrics = !self.show_lyrics;
     }
 
-    /// → engine.toggle_love(cid, name, artists)
+    /// 切换当前选中歌曲的收藏状态
     pub fn toggle_love(&mut self) {
         let entry = if self.is_love_view {
             self.engine.loved_list.get(self.selected_song).cloned()
         } else {
-            self.engine
-                .songs
-                .get(self.selected_song)
-                .map(|s| LovedEntry {
-                    cid: s.cid.clone(),
-                    name: s.name.clone(),
-                    artists: s.artistes.clone(),
-                })
+            self.engine.songs.get(self.selected_song).map(|s| LovedEntry {
+                cid: s.cid.clone(),
+                name: s.name.clone(),
+                artists: s.artistes.clone(),
+            })
         };
         if let Some(e) = entry {
             self.engine.toggle_love(&e.cid, &e.name, &e.artists);

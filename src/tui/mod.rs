@@ -15,6 +15,7 @@ mod ui;
 
 use app::App;
 
+/// TUI 入口：启用终端原始模式 + 交替屏幕，创建事件循环，按帧渲染
 pub fn run() -> io::Result<()> {
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen, cursor::Hide)?;

@@ -10,6 +10,7 @@ use monster_player::kernel::PlayMode;
 
 use super::app::App;
 
+/// 主渲染入口：外层边框 + 左右分栏布局
 pub fn draw(f: &mut Frame, app: &mut App) {
     let size = f.area();
 
@@ -29,6 +30,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     draw_right(f, app, h_chunks[1]);
 }
 
+/// 左侧区域：信息栏 + 底部状态栏
 fn draw_left(f: &mut Frame, app: &App, area: Rect) {
     let v_chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -39,6 +41,7 @@ fn draw_left(f: &mut Frame, app: &App, area: Rect) {
     draw_bottom(f, app, v_chunks[1]);
 }
 
+/// 显示专辑简介 + 歌曲信息 + 进度条
 fn draw_info(f: &mut Frame, app: &App, area: Rect) {
     let mut lines: Vec<Line> = vec![];
 
@@ -68,6 +71,19 @@ fn draw_info(f: &mut Frame, app: &App, area: Rect) {
             Span::styled("#".repeat(filled), Style::default().fg(Color::Cyan)),
             Span::styled(" ".repeat(unfilled), Style::default().fg(Color::DarkGray)),
         ]));
+
+        let elapsed = app.engine.elapsed_secs();
+        let time_text = if let Some(dur) = app.engine.duration_secs() {
+            format!("{:02}:{:02}/{:02}:{:02}",
+                elapsed as u64 / 60, elapsed as u64 % 60,
+                dur as u64 / 60, dur as u64 % 60)
+        } else {
+            format!("{:02}:{:02}", elapsed as u64 / 60, elapsed as u64 % 60)
+        };
+        lines.push(Line::from(Span::styled(
+            time_text,
+            Style::default().fg(Color::DarkGray),
+        )));
     }
 
     if lines.is_empty() {
@@ -93,6 +109,7 @@ fn draw_info(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(p, display_area);
 }
 
+/// 底部状态栏：播放状态/模式/音量/快捷键提示
 fn draw_bottom(f: &mut Frame, app: &App, area: Rect) {
     let play_state = if app.engine.playing {
         "O Playing"
@@ -162,6 +179,7 @@ fn draw_bottom(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(p, centered_area);
 }
 
+/// 收藏视图：显示所有收藏歌曲列表
 fn draw_loved_view(f: &mut Frame, app: &App, area: Rect) {
     let v_chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -234,6 +252,7 @@ fn draw_loved_view(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(p, v_chunks[1]);
 }
 
+/// 右侧区域：根据状态分发到 歌词/收藏/专辑+歌曲 视图
 fn draw_right(f: &mut Frame, app: &App, area: Rect) {
     if app.show_lyrics {
         draw_lyrics(f, app, area);
@@ -259,6 +278,7 @@ fn draw_right(f: &mut Frame, app: &App, area: Rect) {
     draw_song_list(f, app, v_chunks[1]);
 }
 
+/// 专辑名称 + 艺术家 + 页码
 fn draw_album_info(f: &mut Frame, app: &App, area: Rect) {
     let mut lines: Vec<Line> = vec![];
 
@@ -299,6 +319,7 @@ fn draw_album_info(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(p, area);
 }
 
+/// 歌曲列表：选中标记 > / 播放中青色 / 收藏红色 *
 fn draw_song_list(f: &mut Frame, app: &App, area: Rect) {
     if !app.engine.songs_loaded {
         let text = vec![Line::from(Span::styled(
@@ -360,6 +381,7 @@ fn draw_song_list(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(p, area);
 }
 
+/// 歌词视图：当前行青色加粗，滚动跟随
 fn draw_lyrics(f: &mut Frame, app: &App, area: Rect) {
     if app.engine.lyrics.is_empty() {
         let text = vec![Line::from(Span::styled(
