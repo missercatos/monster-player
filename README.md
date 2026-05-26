@@ -111,10 +111,13 @@ graph LR
 
 ###  从源码构建
 
+> `target/` 等编译产物已通过 `.gitignore` 排除，不会下载。
+
 ```bash
-# 克隆仓库
-git clone https://github.com/your-username/monster-player.git
+# 克隆仓库（浅克隆 + 稀疏检出，只下载源码和配置文件）
+git clone --depth 1 --filter=blob:none --sparse https://github.com/your-username/monster-player.git
 cd monster-player
+git sparse-checkout set src Cargo.toml Cargo.lock
 
 # 构建 (默认 TUI feature)
 cargo build --release
