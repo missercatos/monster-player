@@ -67,7 +67,8 @@ fn setup_cjk_fonts(ctx: &eframe::egui::Context) {
 
 /// 按优先级搜索系统 CJK 字体文件
 fn find_cjk_font() -> Option<std::sync::Arc<eframe::egui::FontData>> {
-    let paths = [
+    #[cfg(target_os = "linux")]
+    let paths: &[&str] = &[
         "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/noto-cjk/NotoSansCJK-Light.ttc",
         "/usr/share/fonts/noto-cjk/NotoSansCJK-Medium.ttc",
@@ -76,6 +77,23 @@ fn find_cjk_font() -> Option<std::sync::Arc<eframe::egui::FontData>> {
         "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
         "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
         "/usr/share/fonts/wps-office/FZFSK.TTF",
+    ];
+    #[cfg(target_os = "windows")]
+    let paths: &[&str] = &[
+        r"C:\Windows\Fonts\msyh.ttc",
+        r"C:\Windows\Fonts\msyhbd.ttc",
+        r"C:\Windows\Fonts\msyhl.ttc",
+        r"C:\Windows\Fonts\SIMKAI.ttf",
+        r"C:\Windows\Fonts\simsun.ttc",
+        r"C:\Windows\Fonts\msmincho.ttc",
+        r"C:\Windows\Fonts\yumin.ttf",
+    ];
+    #[cfg(target_os = "macos")]
+    let paths: &[&str] = &[
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/PingFang.ttf",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        "/System/Library/Fontts/STHeiti Medium.ttc",
     ];
 
     for path in paths {
