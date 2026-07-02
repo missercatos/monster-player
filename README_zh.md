@@ -38,12 +38,30 @@
 |--------|-----|------------|
 | ![](introduce/GUI-origin.png) | ![](introduce/GUI-tty.png) | ![](introduce/GUI-tokyonight.png) |
 
-## 安装
+## 快速开始
 
-### 环境要求
+### 预编译二进制
 
-- Rust 工具链 1.81+
-- 音频输出设备
+从 [Releases](https://github.com/your-username/monster-player/releases) 页面下载对应平台的二进制文件：
+
+| 文件 | 平台 | 类型 |
+|------|------|------|
+| `msplayer-tui` | Linux x86_64 | TUI |
+| `msplayer-gui` | Linux x86_64 | GUI |
+| `msplayer-gui.exe` | Windows x86_64 | GUI |
+
+**Linux** -- 将二进制文件放入 `PATH`，终端直接运行：
+
+```bash
+chmod +x msplayer-tui msplayer-gui
+sudo cp msplayer-tui /usr/local/bin/
+sudo cp msplayer-gui /usr/local/bin/
+
+msplayer-tui   # TUI
+msplayer-gui   # GUI
+```
+
+**Windows** -- 双击 `msplayer-gui.exe` 即可启动。(๑•̀ㅂ•́)و✧ 桌面快捷方式和安装包正在制作中，请耐心等待~
 
 ### 从源码构建
 
@@ -51,14 +69,11 @@
 git clone https://github.com/your-username/monster-player.git
 cd monster-player
 
-# TUI (默认 feature)
+# TUI
 cargo build --release
 
 # GUI
 cargo build --release --features gui
-
-# 运行
-cargo run --release
 ```
 
 ## 使用说明

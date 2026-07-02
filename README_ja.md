@@ -38,12 +38,30 @@
 |--------|-----|------------|
 | ![](introduce/GUI-origin.png) | ![](introduce/GUI-tty.png) | ![](introduce/GUI-tokyonight.png) |
 
-## インストール
+## はじめ方
 
-### 必要条件
+### ビルド済みバイナリ
 
-- Rust ツールチェーン 1.81+
-- オーディオ出力デバイス
+[Releases](https://github.com/your-username/monster-player/releases) ページから各プラットフォーム向けのバイナリをダウンロード：
+
+| ファイル | プラットフォーム | 種類 |
+|----------|------------------|------|
+| `msplayer-tui` | Linux x86_64 | TUI |
+| `msplayer-gui` | Linux x86_64 | GUI |
+| `msplayer-gui.exe` | Windows x86_64 | GUI |
+
+**Linux** -- バイナリを `PATH` に配置して端末から実行：
+
+```bash
+chmod +x msplayer-tui msplayer-gui
+sudo cp msplayer-tui /usr/local/bin/
+sudo cp msplayer-gui /usr/local/bin/
+
+msplayer-tui   # TUI
+msplayer-gui   # GUI
+```
+
+**Windows** -- `msplayer-gui.exe` をダブルクリックするだけで起動します。(๑•̀ㅂ•́)و✧ デスクトップショートカットとインストーラは準備中です、少々お待ちください~
 
 ### ソースからビルド
 
@@ -51,14 +69,11 @@
 git clone https://github.com/your-username/monster-player.git
 cd monster-player
 
-# TUI (デフォルト feature)
+# TUI
 cargo build --release
 
 # GUI
 cargo build --release --features gui
-
-# 実行
-cargo run --release
 ```
 
 ## 使用方法

@@ -38,27 +38,42 @@
 |--------|-----|------------|
 | ![](introduce/GUI-origin.png) | ![](introduce/GUI-tty.png) | ![](introduce/GUI-tokyonight.png) |
 
-## Installation
+## Getting Started
 
-### Prerequisites
+### Pre-built Binaries
 
-- Rust toolchain 1.81+
-- Audio output device
+Grab the binary for your platform from the [Releases](https://github.com/your-username/monster-player/releases) page:
 
-### Build from source
+| File | Platform | Type |
+|------|----------|------|
+| `msplayer-tui` | Linux x86_64 | TUI |
+| `msplayer-gui` | Linux x86_64 | GUI |
+| `msplayer-gui.exe` | Windows x86_64 | GUI |
+
+**Linux** -- place the binary in your `PATH` and run it from the terminal:
+
+```bash
+chmod +x msplayer-tui msplayer-gui
+sudo cp msplayer-tui /usr/local/bin/
+sudo cp msplayer-gui /usr/local/bin/
+
+msplayer-tui   # TUI
+msplayer-gui   # GUI
+```
+
+**Windows** -- just double-click `msplayer-gui.exe` to launch. (๑•̀ㅂ•́)و✧ A proper desktop shortcut and installer are on the way -- please be patient~
+
+### Build from Source
 
 ```bash
 git clone https://github.com/your-username/monster-player.git
 cd monster-player
 
-# TUI (default feature)
+# TUI
 cargo build --release
 
 # GUI
 cargo build --release --features gui
-
-# Run
-cargo run --release
 ```
 
 ## Usage
