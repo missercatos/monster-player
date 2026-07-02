@@ -233,11 +233,6 @@ impl App {
         self.engine.seek_to(progress);
     }
 
-    /// 切换帮助面板的显示 / 隐藏
-    pub fn toggle_help(&mut self) {
-        self.show_help = !self.show_help;
-    }
-
     /// 切换歌词视图的显示 / 隐藏
     pub fn toggle_lyrics(&mut self) {
         self.show_lyrics = !self.show_lyrics;
@@ -358,11 +353,6 @@ impl App {
     /// 切换主题到下一个
     pub fn cycle_theme(&mut self) {
         self.theme_name = self.theme_name.next();
-    }
-
-    /// 切换歌词动画模式
-    pub fn cycle_lyric_animation(&mut self) {
-        self.lyric_animation = self.lyric_animation.next();
     }
 
     /// 切换下载开关

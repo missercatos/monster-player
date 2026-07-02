@@ -1,7 +1,7 @@
 use eframe::egui;
 
 use super::app::App;
-use super::theme::{LyricAnimation, ThemeColors, ThemeName};
+use super::theme::{ThemeColors};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum SettingsTab {
@@ -30,14 +30,6 @@ impl SettingsTab {
         }
     }
 
-    pub fn index(&self) -> usize {
-        match self {
-            SettingsTab::About => 0,
-            SettingsTab::Shortcuts => 1,
-            SettingsTab::Themes => 2,
-            SettingsTab::Extra => 3,
-        }
-    }
 
     pub fn from_index(i: usize) -> Self {
         match i {

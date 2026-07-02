@@ -1,308 +1,307 @@
 # 🎵 msplayer
 
-**塞壬唱片终端音乐播放器** — 一个基于 Rust 的 Monster Siren 流媒体客户端，以共享内核驱动多 UI 界面。
+> **A Monster Siren Records streaming client written in Rust** — shared kernel driving multiple UIs.
+
+[English](#english) | [中文](#中文) | [日本語](#日本語)
 
 ---
 
-## 🧠 哲学理念
+# English
 
-```mermaid
-graph TB
-    subgraph KERNEL[" kernel (内核)"]
-        direction LR
-        A[" player<br/>音频播放"]
-        B[" engine<br/>数据管理"]
-        C[" api<br/>HTTP 数据模型"]
-    end
+## Overview
 
-    KERNEL --> TUI1
-    KERNEL --> TUI2
-    KERNEL --> GUI1
+**msplayer** is an unofficial desktop music player for [Monster Siren Records](https://monster-siren.hypergryph.com), the label behind Arknights music. It features a shared-kernel architecture — all playback logic, data caching, and API interaction live in one core engine, with pluggable frontends (TUI and GUI).
 
-    TUI1[" TUI A<br/>"]
-    TUI2[" TUI B<br/>"]
-    GUI1[" GUI A<br/>"]
+## Features
 
-    TUI1C["只管渲染 · 只管按键"]
-    TUI2C["只管渲染 · 只管按键"]
-    GUI1C["只管渲染 · 只管按键"]
+| Feature | Description |
+|---------|-------------|
+| 🎵 **Streaming Playback** | Progressive download with 8MB buffer — songs start playing before the full file is downloaded |
+| 🖥️ **Terminal UI (TUI)** | Full ratatui interface with keyboard-only navigation (vim-style hjkl) |
+| 🪟 **Desktop GUI** | eframe/egui transparent overlay window with custom title bar, play controls, and search |
+| ❤️ **Favorites** | Toggle love on any song with `s` — persisted to `~/.config/msplayer/loved.json` |
+| 🔍 **Search** | Type `/` to open a Spotlight-style search popup — search across all albums |
+| 🎤 **Synced Lyrics** | LRC lyric parsing with real-time highlighting as the song plays |
+| 🔀 **Play Modes** | Album List / Album Random / Global List / Global Random / Single / Love List / Love Random |
+| 🌍 **Cross-platform** | Linux, Windows, macOS — auto-detects system CJK fonts |
+| 🎨 **3 Themes** | Origin (dark cyan), TTY (monochrome), Tokyonight (blue-purple) |
 
-    TUI1 --- TUI1C
-    TUI2 --- TUI2C
-    GUI1 --- GUI1C
+## Screenshots
 
-    style KERNEL fill:#1a1a2e,stroke:#00ccff,color:#ffffff
-    style TUI1 fill:#0d2818,stroke:#00ff88,color:#ffffff
-    style TUI2 fill:#0d2818,stroke:#00ff88,color:#ffffff
-    style GUI1 fill:#2a1a0e,stroke:#ffaa00,color:#ffffff
-    style TUI1C fill:transparent,stroke:none,color:#aaaaaa
-    style TUI2C fill:transparent,stroke:none,color:#aaaaaa
-    style GUI1C fill:transparent,stroke:none,color:#aaaaaa
-```
+| TUI - Main | TUI - Lyrics |
+|------------|-------------|
+| ![TUI Main](introduce/TUI-origin.png) | ![TUI Lyrics](introduce/TUI-origin-1.png) |
 
-> **一个内核，多个外皮。** UI 层只需关心渲染和按键映射，所有业务逻辑（播放控制、数据缓存、API 调用）由内核统一提供。
+### GUI (Origin Theme)
 
----
+![GUI](introduce/GUI-origin.png)
 
-## 📂 项目结构
+## Installation
 
-```mermaid
-graph LR
-    subgraph SRC["src/"]
-        direction TB
-        LIB[" lib.rs<br/>库入口"]
-        MAIN[" main.rs<br/>feature 分发"]
-        KERNEL2[" kernel.rs<br/>引擎核心 507行"]
-        PLAYER[" player.rs<br/>音频播放器 146行"]
-        API[" api/<br/>HTTP 客户端 + 类型"]
-        ERROR[" error.rs<br/>错误类型 18行"]
-        ART[" ascii_art.rs<br/>字符画工具 27行"]
-        TUI[" tui/<br/>TUI 层 508行"]
-        GUI[" origin_gui/<br/>GUI 原型 739行"]
-    end
+### Prerequisites
+- **Rust** toolchain 1.81+
+- Audio output device
 
-    MAIN -->|default feature| TUI
-    MAIN -->|gui feature| GUI
-    MAIN --> LIB
-    LIB --> KERNEL2
-    LIB --> PLAYER
-    LIB --> API
-    LIB --> ERROR
-    LIB --> ART
-
-    style SRC fill:transparent,stroke:#555,color:#fff
-    style LIB fill:#1a1a2e,stroke:#00ccff,color:#fff
-    style KERNEL2 fill:#1a1a2e,stroke:#00ccff,color:#fff
-    style PLAYER fill:#1a1a2e,stroke:#00ccff,color:#fff
-    style API fill:#1a1a2e,stroke:#00ccff,color:#fff
-    style ERROR fill:#1a1a2e,stroke:#00ccff,color:#fff
-    style ART fill:#1a1a2e,stroke:#00ccff,color:#fff
-    style TUI fill:#0d2818,stroke:#00ff88,color:#fff
-    style GUI fill:#2a1a0e,stroke:#ffaa00,color:#aaa
-```
-
-> **一个内核，多个外皮。** UI 层只需关心渲染和按键映射，所有业务逻辑（播放控制、数据缓存、API 调用）由内核统一提供。
-
----
-
-##  当前 TUI 主题：origin
-
-唯一内置主题，以简洁分栏布局呈现专辑、歌曲、歌词和控制信息。
-
-###  截图
-
-![origin 主界面](introduce/TUI-origin.png)
-
-![origin 歌词界面](introduce/TUI-origin-1.png)
-
-###  演示视频
-
->  [点击下载观看演示视频](introduce/TUI-origin.mp4)
-
----
-
-##  下载 & 使用
-
-###  环境要求
-
-- **Rust** 工具链 (1.81+)
-- **Linux** 或 **Windows** 终端
-- 音频输出设备
-
-###  从源码构建
-
-> `target/` 等编译产物已通过 `.gitignore` 排除，不会下载。
+### Build from Source
 
 ```bash
-# 克隆仓库（浅克隆 + 稀疏检出，只下载源码和配置文件）
-git clone --depth 1 --filter=blob:none --sparse https://github.com/your-username/monster-player.git
+git clone https://github.com/your-username/monster-player.git
 cd monster-player
-git sparse-checkout set src Cargo.toml Cargo.lock
 
-# 构建 (默认 TUI feature)
+# TUI (default)
 cargo build --release
 
-# 运行
+# GUI
+cargo build --release --features gui
+
+# Run
 cargo run --release
 ```
 
-### 🎮 快捷键一览
+## Usage
+
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play selected song |
+| `x` | Pause / Resume |
+| `h` / `l` or `←` / `→` | Previous / Next album |
+| `j` / `k` or `↓` / `↑` | Previous / Next song (browse) |
+| `Shift+A` / `Shift+D` | Skip to previous / next song (play immediately) |
+| `a` / `d` | Seek backward / forward |
+| `e` | Cycle play mode |
+| `o` / `p` | Volume down / up |
+| `v` | Toggle lyrics view |
+| `s` | Toggle love (favorite) |
+| `Ctrl+T` | Settings / Help |
+| `/` | Search |
+| `Esc` | Exit search / Close popup |
+
+### Mouse Controls (GUI only)
+- **Scroll** in right panel → browse songs
+- **Click** play mode text → cycle modes
+- **Click** `<` `||`/`>` `>` buttons → skip / pause / play
+- **Drag** progress bar → seek
+- **Click** search icon (top-right) → search popup
+- **Double-click** search result → jump to song
+
+## Architecture
+
+```
+┌─────────────────────────────────────┐
+│              UI Layer               │
+│  ┌─────────┐  ┌──────────────────┐  │
+│  │   TUI   │  │       GUI        │  │
+│  │ ratatui │  │  eframe / egui   │  │
+│  └────┬────┘  └───────┬──────────┘  │
+│       │               │             │
+├───────┴───────────────┴─────────────┤
+│           Shared Kernel             │
+│  ┌─────────┐  ┌────────┐  ┌──────┐ │
+│  │  engine │  │ player │  │ api  │ │
+│  │  data   │  │ audio  │  │HTTP  │ │
+│  └─────────┘  └────────┘  └──────┘ │
+└─────────────────────────────────────┘
+```
+
+## Project Structure
+
+```
+src/
+├── lib.rs              Library entry
+├── main.rs             Binary entry (feature dispatch)
+├── kernel.rs           Core engine (state, cache, streaming, lyrics)
+├── player.rs           Audio player (rodio backend)
+├── error.rs            Error types
+├── api/
+│   ├── mod.rs
+│   ├── types.rs        API response types
+│   └── client.rs       HTTP client (ureq)
+├── tui/                Terminal UI
+│   ├── mod.rs          crossterm init + event loop
+│   ├── app.rs          UI state shell
+│   ├── event.rs        Keyboard event mapping
+│   └── ui.rs           Layout + rendering
+└── origin_gui/         Desktop GUI
+    ├── mod.rs          Frameless transparent window
+    ├── app.rs          GUI state
+    ├── ui.rs           Layout + rendering
+    ├── theme.rs        Theme system (3 themes)
+    └── settings.rs     Settings popup
+```
+
+## Roadmap
+
+- [x]  TUI player — full keyboard operation
+- [x]  GUI player — transparent window, custom title bar, search popup
+- [ ]  Windows .exe installer — NSIS / WiX
+- [ ]  Android port — cross-compile + Native Activity
+- [ ]  Linux package — AUR / deb / rpm
+- [ ]  More themes
+
+## Credits
+
+Music content powered by [Monster Siren Records](https://monster-siren.hypergryph.com) / Hypergryph.
+
+*This is an unofficial community project, not affiliated with Hypergryph.*
+
+---
+
+# 中文
+
+## 概述
+
+**msplayer** 是一款非官方的 [塞壬唱片](https://monster-siren.hypergryph.com) 桌面音乐播放器，采用共享内核架构 — 所有播放逻辑、数据缓存和 API 交互集中在核心引擎中，UI 层可插拔替换（TUI 和 GUI）。
+
+## 功能介绍
+
+| 功能 | 说明 |
+|------|------|
+| 🎵 **流式播放** | 渐进式下载，8MB 缓冲 — 歌曲在完整下载完成前即可开始播放 |
+| 🖥️ **终端界面 (TUI)** | 全 ratatui 界面，纯键盘操作（vim 风格 hjkl） |
+| 🪟 **桌面 GUI** | eframe/egui 透明悬浮窗口，自定义标题栏、播放控件和搜索 |
+| ❤️ **收藏系统** | 按 `s` 收藏/取消收藏歌曲，持久化到 `~/.config/msplayer/loved.json` |
+| 🔍 **搜索** | 按 `/` 打开 Spotlight 风格搜索弹窗，跨专辑搜索 |
+| 🎤 **同步歌词** | LRC 歌词解析，播放时实时高亮当前歌词行 |
+| 🔀 **播放模式** | 专辑列表 / 专辑随机 / 全局列表 / 全局随机 / 单曲循环 / 收藏列表 / 收藏随机 |
+| 🌍 **跨平台** | Linux、Windows、macOS — 自动检测系统 CJK 字体 |
+| 🎨 **3 套主题** | Origin（暗色青）、TTY（黑白）、Tokyonight（蓝紫） |
+
+## 截图
+
+请参阅上方的 [English Screenshots](#screenshots)。
+
+## 安装
+
+### 环境要求
+- **Rust** 工具链 1.81+
+- 音频输出设备
+
+### 从源码构建
+
+```bash
+git clone https://github.com/your-username/monster-player.git
+cd monster-player
+
+# TUI (默认)
+cargo build --release
+
+# GUI
+cargo build --release --features gui
+```
+
+## 快捷键
 
 | 按键 | 功能 |
 |------|------|
-| `Space` |  播放选中歌曲 |
-| `x` |  暂停/恢复 |
-| `h`/`l` / `←`/`→` |  切换专辑 |
-| `j`/`k` / `↓`/`↑` |  切换歌曲 |
-| `A`/`D` (Shift) |  上一首/下一首（单曲模式则重播） |
-| `a`/`d` |  进度后退/前进 5% |
-| `e` |  循环播放模式 |
-| `o`/`p |  音量 -/+5% |
-| `v` |  歌词视图切换 |
-| `s` |  收藏/取消收藏当前歌曲 |
-| `Ctrl+T` |  显示所有快捷键 |
-| `q` |  退出 |
+| `Space` | 播放选中歌曲 |
+| `x` | 暂停/恢复 |
+| `h`/`l` 或 `←`/`→` | 上/下专辑 |
+| `j`/`k` 或 `↓`/`↑` | 上/下歌曲（浏览模式） |
+| `Shift+A`/`Shift+D` | 上一首/下一首（立即播放） |
+| `a`/`d` | 进度后退/前进 |
+| `e` | 切换播放模式 |
+| `o`/`p` | 音量减/增 |
+| `v` | 歌词显示切换 |
+| `s` | 收藏/取消收藏 |
+| `Ctrl+T` | 设置/帮助 |
+| `/` | 搜索 |
+
+### 鼠标操作（仅 GUI）
+- **滚轮** 在右侧面板 → 浏览歌曲
+- **点击** 播放模式文字 → 切换模式
+- **点击** `<` `||`/`>` `>` 按钮 → 切歌/暂停/播放
+- **拖拽** 进度条 → 跳转进度
+- **点击** 搜索图标（右上角）→ 搜索弹窗
+- **双击** 搜索结果 → 跳转
+
+## 架构
+
+请参阅上方的 [English Architecture](#architecture)。
+
+## 致谢
+
+音乐内容由 [塞壬唱片 (Monster Siren Records)](https://monster-siren.hypergryph.com) / 鹰角网络提供。
+
+*本项目为社区开发的非官方客户端，与鹰角网络无附属关系。*
 
 ---
 
-<details>
-<summary> 项目文件结构 & 实现原理 (点击展开)</summary>
+# 日本語
 
-###  文件结构
+## 概要
 
-```
-monster-player/
-│
-├── Cargo.toml                     # 项目配置 + feature 开关
-├── API.md                         # 塞壬唱片 API 文档
-├── README.md                      # 本文件
-│
-├── introduce/                     # 截图和演示素材
-│   ├── TUI-origin.png
-│   ├── TUI-origin-1.png
-│   └── TUI-origin.mp4
-│
-├── src/
-│   ├── lib.rs                     # 库入口，导出所有 public 模块
-│   ├── main.rs                    # 二进制入口，按 feature 分发 TUI/GUI
-│   │
-│   │  ═══  内核层 (所有 UI 共享) ═══
-│   ├── kernel.rs                  # 引擎核心 (507 行)
-│   ├── player.rs                  # 音频播放器 (146 行)
-│   ├── api/
-│   │   ├── mod.rs                 # 模块声明 (2 行)
-│   │   ├── types.rs               # API 响应类型定义 (95 行)
-│   │   └── client.rs              # HTTP 客户端 (61 行)
-│   ├── error.rs                   # 错误类型 (18 行)
-│   └── ascii_art.rs               # 字符画工具 (27 行)
-│   │
-│   │  ═══  TUI 层 (当前活跃) ═══
-│   └── tui/
-│       ├── mod.rs                 # 终端初始化 + 事件循环 (47 行)
-│       ├── app.rs                 # UI 薄壳 + 按键分发 (91 行)
-│       ├── event.rs               # 键盘事件处理 (52 行)
-│       └── ui.rs                  # 布局 + 渲染 (318 行)
-│   │
-│   │  ═══  GUI 层 (暂存，未编译) ═══
-│       └── origin_gui/
-│           └── mod.rs             # egui GUI 原型 (739 行)
-│
-├── build.sh                       # [待定] 构建脚本
-├── clean.sh                       # [待定] 清理脚本
-└── install.sh                     # [待定] 安装脚本
-```
+**msplayer** は、[Monster Siren Records](https://monster-siren.hypergryph.com) の非公式デスクトップ音楽プレイヤーです。共有カーネルアーキテクチャを採用し、再生ロジック、データキャッシュ、API通信はすべてコアエンジンに集約。UIはプラグイン可能（TUI と GUI）。
 
-###  各文件功能
+## 機能
 
-| 文件 | 功能 |
+| 機能 | 説明 |
 |------|------|
-| `kernel.rs` |  **核心引擎**。管理所有播放状态、专辑/歌曲数据缓存、歌词解析、音量控制、进度条、预加载策略。所有 UI 层通过 `Engine` 的方法操作和读取 |
-| `player.rs` |  **音频播放器**。封装 `rodio`，提供播放、暂停、跳转、音量、播放进度追踪 |
-| `api/types.rs` |  **数据类型**。定义所有 API 响应的 Rust 结构体（`Album`、`SongDetail`、`AlbumDetail` 等） |
-| `api/client.rs` |  **HTTP 客户端**。封装 `ureq`，提供 6 个 API 端点（专辑列表、专辑详情、歌曲列表、歌曲详情、新闻、搜索） |
-| `error.rs` |  **错误类型**。统一错误枚举 |
-| `tui/mod.rs` |  **TUI 入口**。crossterm 原始模式 + 交替屏幕 + ratatui 渲染循环 |
-| `tui/app.rs` |  **TUI 状态壳**。仅 91 行，持有 `Engine` 和 3 个 UI 专属字段 |
-| `tui/ui.rs` |  **TUI 渲染**。所有布局和绘制逻辑，通过 `app.engine.xxx` 读取内核状态 |
-| `tui/event.rs` |  **TUI 按键**。crossterm 键盘事件 → 调用 `app.xxx()` 方法 |
-| `origin_gui/mod.rs` |  **GUI 原型**。基于 egui 的 frameless 透明窗口，通过 `gui` feature 编译 |
+| 🎵 **ストリーミング再生** | プログレッシブダウンロード、8MBバッファ — ダウンロード完了前に再生開始 |
+| 🖥️ **端末 UI (TUI)** | ratatui による全画面インターフェース、キーボードのみで操作（vim 風 hjkl） |
+| 🪟 **デスクトップ GUI** | eframe/egui 透明オーバーレイウィンドウ、カスタムタイトルバー、再生コントロール、検索 |
+| ❤️ **お気に入り** | `s` キーで楽曲をお気に入り登録 — `~/.config/msplayer/loved.json` に永続化 |
+| 🔍 **検索** | `/` キーで Spotlight 風の検索ポップアップ — 全アルバム横断検索 |
+| 🎤 **同期歌詞** | LRC 歌詞解析、再生位置に合わせてリアルタイムハイライト |
+| 🔀 **再生モード** | アルバム順 / アルバムランダム / 全曲順 / 全曲ランダム / 単曲リピート / お気に入り順 / お気に入りランダム |
+| 🌍 **クロスプラットフォーム** | Linux、Windows、macOS — システムの CJK フォントを自動検出 |
+| 🎨 **3 テーマ** | Origin（ダークシアン）、TTY（モノクロ）、Tokyonight（青紫） |
 
----
+## スクリーンショット
 
-###  依赖 crate 及用途
+上記 [English Screenshots](#screenshots) を参照してください。
 
-####  内核依赖
+## インストール
 
-| crate | 版本 | 文件 | 用途 |
-|-------|------|------|------|
-| `ureq` | 3 | `api/client.rs` |  同步 HTTP 客户端，调用塞壬唱片 REST API |
-| `serde` + `serde_json` | 1 | `api/types.rs` |  JSON 反序列化，将 API 响应转为 Rust 结构体 |
-| `thiserror` | 2 | `error.rs` |  自定义错误类型派生宏 |
-| `rodio` | 0.20 | `player.rs` |  音频播放引擎，管理输出流（`OutputStream`）和播放队列（`Sink`） |
-| `symphonia` | 0.5 | `Cargo.toml` | 🎼 音频格式解码后端（AAC, ALAC, FLAC, MP3, OGG, WAV, Vorbis） |
-| `directories` | 6 | `Cargo.toml` |  获取平台标准目录 |
-| `log` + `env_logger` | 0.4 / 0.11 | `main.rs` |  日志框架 |
-| `image` | 0.25 | `ascii_art.rs` |  图片解码，封面下载和字符画转换 |
+### 必要条件
+- **Rust** ツールチェーン 1.81+
+- オーディオ出力デバイス
 
-#### 🖥️ TUI 依赖
+### ソースからビルド
 
-| crate | 版本 | 文件 | 用途 |
-|-------|------|------|------|
-| `ratatui` | 0.29 | `tui/ui.rs` |  终端 UI 框架。布局（`Layout`+`Constraint`）、控件（`Paragraph`、`Block`）、样式（`Style`、`Color`） |
-| `crossterm` | 0.28 | `tui/mod.rs` `tui/event.rs` |  终端控制。原始模式、交替屏幕、键盘事件（`KeyCode`、`KeyModifiers`） |
-| `unicode-width` | 0.2 | `Cargo.toml` |  字符宽度计算（CJK 字体正确显示） |
+```bash
+git clone https://github.com/your-username/monster-player.git
+cd monster-player
 
----
+# TUI (デフォルト)
+cargo build --release
 
-###  关键函数速查
-
-| 函数 | 位置 | 功能 |
-|------|------|------|
-| `Client::albums()` | `api/client.rs:17` | 📡 获取全量专辑列表 |
-| `Client::album_detail(cid)` | `api/client.rs:23` | 📡 获取专辑详情 + 歌曲列表 |
-| `Client::song_detail(cid)` | `api/client.rs:39` | 📡 获取歌曲详情 + 音频直链 |
-| `Player::play_bytes(data)` | `player.rs:49` | 🔊 将内存 WAV 数据送入 Sink 播放 |
-| `Player::play_bytes_at(data, secs)` | `player.rs:62` |  从指定秒数跳转播放 |
-| `Player::elapsed()` | `player.rs:98` |  当前播放进度（秒），含暂停累加 |
-| `Player::duration()` | `player.rs:106` | ⏱️ 曲目总时长（秒） |
-| `Player::set_volume(vol)` | `player.rs:92` | 🔊 输出音量控制 (0.0–1.0) |
-| `Engine::play_song_at(index)` | `kernel.rs:100` | ▶️ 选歌 + 后台下载 + 播放 |
-| `Engine::seek_forward()` | `kernel.rs:166` | ⏩ 进度前跳 5% |
-| `Engine::seek_backward()` | `kernel.rs:179` | ⏪ 进度后退 5% |
-| `Engine::restart_song()` | `kernel.rs:192` | 🔄 从头重播 |
-| `Engine::update_lyric_index()` | `kernel.rs:428` | 🎤 按播放进度匹配歌词行 |
-| `parse_lrc(text)` | `kernel.rs:444` | 📝 LRC 歌词解析 |
-| `handle_key(app, key)` | `tui/event.rs:15` | ⌨️ 按键分发映射 |
-| `Engine::toggle_love(cid)` | `kernel.rs:247` | ❤️ 收藏/取消收藏歌曲，写入 ~/.config/msplayer/loved.json |
-| `Engine::rebuild_loved_list()` | `kernel.rs:256` | 📋 从 song_cache + 当前专辑重建收藏列表 |
-| `Engine::load_loved(path)` | `kernel.rs:283` | 📂 启动时从 JSON 文件恢复收藏数据 |
-| `Engine::save_loved()` | `kernel.rs:292` | 💾 每次收藏变更时持久化写入 JSON |
-
----
-
-###  收藏系统
-
-- 按 `S` 键标记/取消收藏当前选中歌曲，红色 `*` 显示在歌曲名右侧
-- 收藏数据持久化到 `~/.config/msplayer/loved.json`（重启不丢失）
-- 播放模式新增 `Love List`（收藏列表循环）和 `Love Random`（收藏随机）
-- 进入 Love 模式时，右侧视图切换为 `Loved Songs (N)` 收藏歌曲列表
-
-```mermaid
-graph LR
-    AlbumList["Album List"]
-    AlbumRandom["Album Random"]
-    GlobalList["Global List"]
-    GlobalRandom["Global Random"]
-    Single["Single"]
-    LoveList[" Love List"]
-    LoveRandom[" Love Random"]
-
-    AlbumList --> AlbumRandom --> GlobalList --> GlobalRandom --> Single --> LoveList --> LoveRandom --> AlbumList
+# GUI
+cargo build --release --features gui
 ```
 
-</details>
+## ショートカット
 
----
+| キー | 操作 |
+|------|------|
+| `Space` | 選択曲を再生 |
+| `x` | 一時停止 / 再開 |
+| `h` / `l` または `←` / `→` | 前 / 次のアルバム |
+| `j` / `k` または `↓` / `↑` | 前 / 次の曲（閲覧モード） |
+| `Shift+A` / `Shift+D` | 前 / 次の曲へスキップ（即時再生） |
+| `a` / `d` | シーク（戻る / 進む） |
+| `e` | 再生モード切替 |
+| `o` / `p` | 音量 下 / 上 |
+| `v` | 歌詞表示切替 |
+| `s` | お気に入り切替 |
+| `Ctrl+T` | 設定 / ヘルプ |
+| `/` | 検索 |
 
-## 计划 
+### マウス操作（GUI のみ）
+- **右パネルでスクロール** → 曲の閲覧
+- **再生モードテキストをクリック** → モード切替
+- **`<` `||`/`>` `>` ボタンをクリック** → スキップ / 一時停止 / 再生
+- **プログレスバーをドラッグ** → シーク
+- **検索アイコン（右上）をクリック** → 検索ポップアップ
+- **検索結果をダブルクリック** → 曲へジャンプ
 
-- [x]  **TUI 播放器** — ratatui，终端内全键盘操作
-- [ ]  **GUI 播放器** — egui，独立透明窗口，磨砂玻璃效果
-- [ ]  **Windows .exe 安装包** — NSIS 安装程序，双击安装
-- [ ]  **Android 端** — 交叉编译 + Native Activity
-- [ ]  **Linux 包管理器** — AUR / deb / rpm 分发
-- [ ]  **多风格 UI** — 同一内核驱动不同视觉风格
+## アーキテクチャ
 
-欢迎  Star、 Issue、 PR！
+上記 [English Architecture](#architecture) を参照してください。
 
----
+## クレジット
 
-## 🙏 致谢
+音楽コンテンツは [Monster Siren Records](https://monster-siren.hypergryph.com) / Hypergryph により提供されています。
 
-感谢 **鹰角网络 (Hypergryph)** 和 **塞壬唱片 (Monster Siren Records)** 提供公开 API 与优秀的音乐内容。
-
-> 🎵 [monster-siren.hypergryph.com](https://monster-siren.hypergryph.com/)
-
----
-
-*⚠️ 本项目为社区开发的非官方客户端，与鹰角网络无附属关系。*
+*本プロジェクトはコミュニティ開発の非公式クライアントであり、Hypergryph とは無関係です。*

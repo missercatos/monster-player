@@ -744,7 +744,7 @@ impl Engine {
         if let Some(result) = completed {
             match result {
                 Ok(song) => {
-                    self.song_cache.lock().map(|mut c| { c.insert(song.cid.clone(), song.clone()); });
+                    let _ = self.song_cache.lock().map(|mut c| { c.insert(song.cid.clone(), song.clone()); });
                     self.start_playback(&song);
                 }
                 Err(e) => eprintln!("song fetch: {e}"),

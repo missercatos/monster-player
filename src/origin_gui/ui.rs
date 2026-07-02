@@ -275,7 +275,7 @@ fn handle_mouse(app: &mut App, ctx: &egui::Context) {
 }
 
 /// 自定义标题栏：拖拽移动 + 关闭按钮
-fn draw_title_bar(ctx: &egui::Context, frame: &mut eframe::Frame, colors: ThemeColors) {
+fn draw_title_bar(ctx: &egui::Context, _frame: &mut eframe::Frame, colors: ThemeColors) {
     let screen = ctx.screen_rect();
     let bar_h = 24.0;
     let bar_rect = egui::Rect::from_min_size(screen.min, egui::vec2(screen.width(), bar_h));
@@ -320,7 +320,7 @@ fn draw_title_bar(ctx: &egui::Context, frame: &mut eframe::Frame, colors: ThemeC
 
     // 拖拽 + 关闭交互（通过 ui 层处理）
     let ui = &ctx.layer_painter(egui::LayerId::new(egui::Order::Debug, egui::Id::new("title_interact")));
-    drop(ui);
+    let _ = ui;
     ctx.input(|i| {
         let pos = i.pointer.interact_pos().unwrap_or_default();
         if i.pointer.button_pressed(egui::PointerButton::Primary) {
@@ -536,134 +536,6 @@ fn draw_search_icon(ui: &mut egui::Ui, colors: ThemeColors, size: egui::Vec2) {
     let handle_start = egui::pos2(center.x + r * 0.7, center.y + r * 0.7);
     let handle_end = egui::pos2(center.x + r * 1.4, center.y + r * 1.4);
     painter.line_segment([handle_start, handle_end], stroke);
-}
-
-fn wrap_text(text: &str, width: usize) -> Vec<String> {
-    let chars: Vec<char> = text.chars().collect();
-    chars.chunks(width).map(|chunk| chunk.iter().collect()).collect()
-}
-
-/// 搜索栏：顶部弹出框 + 输入框 + 结果列表（单击选中，双击播放）
-fn draw_search_bar(app: &mut App, colors: ThemeColors, ui: &mut egui::Ui) {
-    let max_results = 6usize;
-    let item_h = 24.0f32;
-    let header_h = 32.0f32;
-
-    // 搜索图标 + 输入框
-    let header_rect = ui.allocate_ui_with_layout(
-        egui::vec2(ui.available_width(), header_h),
-        egui::Layout::left_to_right(egui::Align::Center),
-        |ui| {
-            // 搜索图标
-            let icon_rect = ui.allocate_ui_with_layout(
-                egui::vec2(20.0, header_h),
-                egui::Layout::top_down(egui::Align::Center),
-                |ui| {
-                    let r = 5.0;
-                    let center = ui.available_rect_before_wrap().center();
-                    let stroke = egui::Stroke::new(1.5, colors.search_icon);
-                    ui.painter().circle_stroke(center, r, stroke);
-                    let hs = egui::pos2(center.x + r * 0.7, center.y + r * 0.7);
-                    let he = egui::pos2(center.x + r * 1.3, center.y + r * 1.3);
-                    ui.painter().line_segment([hs, he], stroke);
-                },
-            ).response.rect;
-
-            // 输入文本
-            let text_rect = egui::Rect::from_min_size(
-                egui::pos2(icon_rect.right() + 4.0, icon_rect.top()),
-                egui::vec2(ui.available_width(), header_h),
-            );
-            ui.allocate_ui_at_rect(text_rect, |ui| {
-                let query_display = if app.search_confirmed {
-                    format!("{} ✓", app.search_query)
-                } else {
-                    format!("{}█", app.search_query)
-                };
-                ui.centered_and_justified(|ui| {
-                    ui.label(
-                        egui::RichText::new(query_display)
-                            .font(egui::FontId::proportional(15.0))
-                            .color(colors.search_text),
-                    );
-                });
-            });
-        },
-    ).response.rect;
-
-    // 分割线
-    let divider_rect = ui.allocate_ui_with_layout(
-        egui::vec2(ui.available_width(), 2.0),
-        egui::Layout::top_down(egui::Align::LEFT),
-        |ui| {
-            let r = ui.available_rect_before_wrap();
-            ui.painter().line_segment(
-                [r.left_center(), r.right_center()],
-                egui::Stroke::new(1.0, colors.border),
-            );
-        },
-    ).response.rect;
-
-    // 结果列表
-    let total = app.search_results.len().min(max_results);
-    let list_h = total as f32 * item_h;
-
-    let list_rect = egui::Rect::from_min_size(
-        egui::pos2(divider_rect.left(), divider_rect.bottom()),
-        egui::vec2(ui.available_width(), list_h),
-    );
-
-    // 预先收集需要在闭包中使用的数据，避免借用冲突
-    let items: Vec<(String, bool)> = (0..total).map(|i| {
-        let song = &app.search_results[i];
-        let is_selected = i == app.search_index;
-        let prefix = if is_selected { "> " } else { "  " };
-        let text = format!("{}{} - {}", prefix, song.name, song.artists.join(", "));
-        (text, is_selected)
-    }).collect();
-
-    ui.allocate_ui_at_rect(list_rect, |ui| {
-        if total == 0 {
-            if !app.search_query.is_empty() {
-                ui.label(
-                    egui::RichText::new("No results")
-                        .font(egui::FontId::proportional(13.0))
-                        .color(colors.text_secondary),
-                );
-            }
-            return;
-        }
-
-        for i in 0..total {
-            let (ref text, is_selected) = items[i];
-            let color = if is_selected { colors.accent } else { colors.text_secondary };
-
-            let item_rect = egui::Rect::from_min_size(
-                egui::pos2(list_rect.left(), list_rect.top() + i as f32 * item_h),
-                egui::vec2(list_rect.width(), item_h),
-            );
-
-            ui.allocate_ui_at_rect(item_rect, |ui| {
-                ui.centered_and_justified(|ui| {
-                    ui.label(
-                        egui::RichText::new(text.clone())
-                            .font(egui::FontId::proportional(13.0))
-                            .color(color),
-                    );
-                });
-            });
-
-            // 鼠标交互：单击选中，双击播放
-            let resp = ui.interact(item_rect, egui::Id::new(("search_item", i)), egui::Sense::click());
-            if resp.clicked() {
-                app.search_index = i;
-            }
-            if resp.double_clicked() {
-                app.search_index = i;
-                app.search_confirm();
-            }
-        }
-    });
 }
 
 fn draw_cover(gui: &GuiState, ui: &mut egui::Ui, side: f32) {
