@@ -9,14 +9,17 @@ mod origin_gui;
 fn main() {
     env_logger::init();
 
-    // TUI 入口：feature = "tui" 时编译运行，出错则 panic 退出
+    // GUI 优先：如果 gui feature 启用，只启动 GUI
+    #[cfg(feature = "gui")]
+    {
+        origin_gui::run();
+        return;
+    }
+
+    // TUI 入口：仅在 gui 未启用时运行
     #[cfg(feature = "tui")]
     if let Err(e) = tui::run() {
         eprintln!("TUI error: {e}");
         std::process::exit(1);
     }
-
-    // GUI 入口：feature = "gui" 时编译运行，阻塞主线程直到窗口关闭
-    #[cfg(feature = "gui")]
-    origin_gui::run();
 }
