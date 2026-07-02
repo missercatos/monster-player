@@ -72,7 +72,7 @@ pub struct AlbumSong {
 ///
 /// 用于 `/api/songs` 接口（全量歌曲列表），
 /// 仅含基本元信息，不含音源地址。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Song {
     /// 歌曲唯一标识

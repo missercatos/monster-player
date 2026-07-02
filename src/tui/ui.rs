@@ -2,13 +2,110 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table},
     Frame,
 };
 
 use monster_player::kernel::PlayMode;
 
 use super::app::App;
+
+/// 将文本按指定字符宽度拆分为多行
+fn wrap_text(text: &str, width: usize) -> Vec<String> {
+    let chars: Vec<char> = text.chars().collect();
+    chars
+        .chunks(width)
+        .map(|chunk| chunk.iter().collect())
+        .collect()
+}
+
+/// 搜索栏：顶部白色横线 + 输入框 + 匹配结果列表
+fn draw_search_bar(f: &mut Frame, app: &App, area: Rect) {
+    let max_results = 5usize;
+    let bar_height = 3 + max_results as u16; // 横线 + 输入框 + 空行 + 结果列表
+    let bar_height = bar_height.min(area.height);
+
+    let bar_area = Rect {
+        x: area.x,
+        y: area.y,
+        width: area.width,
+        height: bar_height,
+    };
+
+    // 背景遮罩（深色半透明效果）
+    let bg = Block::default().style(Style::default().bg(Color::Black));
+    f.render_widget(bg, bar_area);
+
+    // 白色横线
+    let line_area = Rect {
+        x: area.x,
+        y: area.y,
+        width: area.width,
+        height: 1,
+    };
+    let separator = Line::from(Span::styled(
+        "─".repeat(area.width as usize),
+        Style::default().fg(Color::White),
+    ));
+    let sep_p = Paragraph::new(separator);
+    f.render_widget(sep_p, line_area);
+
+    // 输入框
+    let input_y = area.y + 1;
+    let input_area = Rect {
+        x: area.x,
+        y: input_y,
+        width: area.width,
+        height: 1,
+    };
+    let input_text = format!("/ {}█", app.search_query);
+    let input_color = if app.search_confirmed {
+        Color::Cyan
+    } else {
+        Color::White
+    };
+    let input_p = Paragraph::new(Line::from(Span::styled(
+        input_text,
+        Style::default().fg(input_color),
+    )));
+    f.render_widget(input_p, input_area);
+
+    // 搜索结果列表
+    let results_y = input_y + 2;
+    let mut results_lines: Vec<Line> = vec![];
+    let show_count = app.search_results.len().min(max_results);
+    for i in 0..show_count {
+        let song = &app.search_results[i];
+        let prefix = if i == app.search_index { "> " } else { "  " };
+        let color = if i == app.search_index {
+            Color::White
+        } else {
+            Color::Gray
+        };
+        let text = format!("{}{} - {}", prefix, song.name, song.artists.join(", "));
+        results_lines.push(Line::from(Span::styled(
+            text,
+            Style::default().fg(color),
+        )));
+    }
+    if app.search_results.is_empty() && !app.search_query.is_empty() {
+        results_lines.push(Line::from(Span::styled(
+            "  No results",
+            Style::default().fg(Color::DarkGray),
+        )));
+    }
+
+    if !results_lines.is_empty() {
+        let results_area = Rect {
+            x: area.x,
+            y: results_y,
+            width: area.width,
+            height: (show_count as u16).min(area.height.saturating_sub(3)),
+        };
+        let results_p = Paragraph::new(results_lines);
+        f.render_widget(results_p, results_area);
+    }
+}
 
 /// 主渲染入口：外层边框 + 左右分栏布局
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -28,6 +125,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     draw_left(f, app, h_chunks[0]);
     draw_right(f, app, h_chunks[1]);
+
+    // 搜索模式：在顶部渲染搜索栏（覆盖）
+    if app.search_mode {
+        draw_search_bar(f, app, size);
+    }
 }
 
 /// 左侧区域：信息栏 + 底部状态栏
@@ -41,15 +143,18 @@ fn draw_left(f: &mut Frame, app: &App, area: Rect) {
     draw_bottom(f, app, v_chunks[1]);
 }
 
-/// 显示专辑简介 + 歌曲信息 + 进度条
+/// 显示专辑简介 + 歌曲信息 + 进度条（每行9字隐形txt格式）
 fn draw_info(f: &mut Frame, app: &App, area: Rect) {
     let mut lines: Vec<Line> = vec![];
+    let char_width = 25usize;
 
     if let Some(ref intro) = app.engine.album_intro {
-        lines.push(Line::from(Span::styled(
-            intro.clone(),
-            Style::default().fg(Color::Gray),
-        )));
+        for line_text in wrap_text(intro, char_width) {
+            lines.push(Line::from(Span::styled(
+                line_text,
+                Style::default().fg(Color::Gray),
+            )));
+        }
         lines.push(Line::from(Span::styled(
             "─".repeat(area.width as usize),
             Style::default().fg(Color::DarkGray),
@@ -57,10 +162,12 @@ fn draw_info(f: &mut Frame, app: &App, area: Rect) {
     }
 
     if let Some(ref info) = app.engine.song_info {
-        lines.push(Line::from(Span::styled(
-            info.clone(),
-            Style::default().fg(Color::White),
-        )));
+        for line_text in wrap_text(info, char_width) {
+            lines.push(Line::from(Span::styled(
+                line_text,
+                Style::default().fg(Color::White),
+            )));
+        }
     }
 
     if let Some(pct) = app.engine.progress {
@@ -114,47 +221,68 @@ fn draw_bottom(f: &mut Frame, app: &App, area: Rect) {
     let play_state = if app.engine.playing {
         "O Playing"
     } else {
-        "X Paused"
+        "O Paused"
     };
 
     let mode_text = match app.engine.play_mode {
-        PlayMode::AlbumList => "Album List",
-        PlayMode::AlbumRandom => "Album Random",
-        PlayMode::GlobalList => "Global List",
-        PlayMode::GlobalRandom => "Global Random",
-        PlayMode::Single => "Single",
-        PlayMode::LoveList => "Love List",
-        PlayMode::LoveRandom => "Love Random",
+        PlayMode::AlbumList => "专辑列表",
+        PlayMode::AlbumRandom => "专辑随机",
+        PlayMode::GlobalList => "全局列表",
+        PlayMode::GlobalRandom => "全局随机",
+        PlayMode::Single => "单曲循环",
+        PlayMode::LoveList => "收藏列表",
+        PlayMode::LoveRandom => "收藏随机",
     };
 
     let volume_str = format!("Volume: {}%", app.engine.volume);
 
-    let mut items: Vec<String> = if app.show_help {
-        vec![
-            "q         Quit".into(),
-            "h/l  ←/→  Prev/Next album".into(),
-            "j/k  ↓/↑  Prev/Next song".into(),
-            "A/D  Shift  Prev/Next song".into(),
-            "a/d         Seek backward/forward 5%".into(),
-            "Space       Play selected song".into(),
-            "x           Pause / Resume".into(),
-            "e           Cycle play mode".into(),
-            "o           Volume -5%".into(),
-            "p           Volume +5%".into(),
-            "v           Toggle lyrics".into(),
-            "s           Toggle love on selected song".into(),
-            "Ctrl+T      Toggle this help".into(),
-        ]
+    if app.show_help {
+        let shortcuts: Vec<(&str, &str)> = vec![
+            ("q", "Quit"),
+            ("/", "Search songs"),
+            ("h/l, ←/→", "Prev/Next album"),
+            ("j/k, ↓/↑", "Prev/Next song"),
+            ("A/D (Shift)", "Prev/Next song"),
+            ("a/d", "Seek backward/forward 5%"),
+            ("Space", "Play selected song"),
+            ("x", "Pause / Resume"),
+            ("e", "Cycle play mode"),
+            ("o", "Volume -5%"),
+            ("p", "Volume +5%"),
+            ("v", "Toggle lyrics"),
+            ("s", "Toggle love on selected song"),
+            ("Ctrl+T", "Toggle this help"),
+        ];
+
+        let rows: Vec<Row> = shortcuts
+            .iter()
+            .map(|(key, desc)| {
+                Row::new(vec![
+                    Cell::from(*key).style(Style::default().fg(Color::White)),
+                    Cell::from(*desc).style(Style::default().fg(Color::White)),
+                ])
+            })
+            .collect();
+
+        let widths = [Constraint::Length(18), Constraint::Min(0)];
+        let help_table = Table::new(rows, widths);
+
+        let line_count = shortcuts.len() as u16;
+        let v_center = area.height.saturating_sub(line_count) / 2;
+        let centered_area = Rect {
+            y: area.y + v_center,
+            height: line_count,
+            ..area
+        };
+        f.render_widget(help_table, centered_area);
     } else {
-        vec![
+        let mut items: Vec<String> = vec![
             play_state.into(),
             mode_text.into(),
             volume_str,
             "Ctrl+T for help".into(),
-        ]
-    };
+        ];
 
-    if !app.show_help {
         if app.engine.buffering {
             if let Some(ref msg) = app.engine.buffering_msg {
                 items.insert(1, msg.clone());
@@ -162,21 +290,21 @@ fn draw_bottom(f: &mut Frame, app: &App, area: Rect) {
         } else if let Some(ref name) = app.engine.current_song_name {
             items.insert(1, name.clone());
         }
-    }
 
-    let text: Vec<Line> = items
-        .iter()
-        .map(|s| Line::from(Span::styled(s.clone(), Style::default().fg(Color::White))))
-        .collect();
-    let line_count = text.len() as u16;
-    let p = Paragraph::new(text).centered();
-    let v_center = area.height.saturating_sub(line_count) / 2;
-    let centered_area = Rect {
-        y: area.y + v_center,
-        height: line_count,
-        ..area
-    };
-    f.render_widget(p, centered_area);
+        let text: Vec<Line> = items
+            .iter()
+            .map(|s| Line::from(Span::styled(s.clone(), Style::default().fg(Color::White))))
+            .collect();
+        let line_count = text.len() as u16;
+        let p = Paragraph::new(text).centered();
+        let v_center = area.height.saturating_sub(line_count) / 2;
+        let centered_area = Rect {
+            y: area.y + v_center,
+            height: line_count,
+            ..area
+        };
+        f.render_widget(p, centered_area);
+    }
 }
 
 /// 收藏视图：显示所有收藏歌曲列表
@@ -321,6 +449,71 @@ fn draw_album_info(f: &mut Frame, app: &App, area: Rect) {
 
 /// 歌曲列表：选中标记 > / 播放中青色 / 收藏红色 *
 fn draw_song_list(f: &mut Frame, app: &App, area: Rect) {
+    // 全局模式：从 global_playlist 渲染
+    if app.engine.is_global_mode() {
+        if app.engine.global_playlist.is_empty() {
+            let text = vec![Line::from(Span::styled(
+                "Loading global playlist...",
+                Style::default().fg(Color::DarkGray),
+            ))];
+            let p = Paragraph::new(text).centered();
+            f.render_widget(p, area);
+            return;
+        }
+
+        let max_display = (area.height as usize).saturating_sub(2);
+        let total = app.engine.global_playlist.len();
+        let current = app.engine.global_index;
+        let start = if total <= max_display {
+            0
+        } else {
+            let half = max_display / 2;
+            current
+                .saturating_sub(half)
+                .min(total.saturating_sub(max_display))
+        };
+        let end = (start + max_display).min(total);
+
+        let mut lns: Vec<Line> = vec![];
+        for i in start..end {
+            let song = &app.engine.global_playlist[i];
+            let prefix = if i == current { "> " } else { "  " };
+            let is_playing = app
+                .engine
+                .current_song_cid
+                .as_ref()
+                .map_or(false, |cid| cid == &song.cid);
+
+            let color = if is_playing {
+                Color::Cyan
+            } else if i == current {
+                Color::White
+            } else {
+                Color::Gray
+            };
+
+            let text = format!(
+                "{}{} - {}",
+                prefix,
+                song.name,
+                song.artists.join(", ")
+            );
+            if app.engine.is_loved(&song.cid) {
+                lns.push(Line::from(vec![
+                    Span::styled(text, Style::default().fg(color)),
+                    Span::styled(" *", Style::default().fg(Color::Red)),
+                ]));
+            } else {
+                lns.push(Line::from(Span::styled(text, Style::default().fg(color))));
+            }
+        }
+
+        let p = Paragraph::new(lns);
+        f.render_widget(p, area);
+        return;
+    }
+
+    // 专辑模式：原有逻辑
     if !app.engine.songs_loaded {
         let text = vec![Line::from(Span::styled(
             "Loading songs...",

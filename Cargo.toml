@@ -33,6 +33,7 @@ crossterm = { version = "0.28", optional = true }
 eframe = { version = "0.31", optional = true }
 image = "0.25"
 fastrand = "2"
+rustfft = "6"
 
 [profile.release]
 lto = "thin"
