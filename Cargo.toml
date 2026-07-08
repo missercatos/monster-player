@@ -6,6 +6,7 @@ edition = "2024"
 [lib]
 name = "monster_player"
 path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "msplayer"
@@ -34,6 +35,7 @@ eframe = { version = "0.31", optional = true }
 image = "0.25"
 fastrand = "2"
 rustfft = "6"
+toml = "0.8"
 
 [profile.release]
 lto = "thin"
