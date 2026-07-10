@@ -178,3 +178,5 @@ src/
 Music content powered by [Monster Siren Records](https://monster-siren.hypergryph.com) / Hypergryph.
 
 *This is an unofficial community project, not affiliated with Hypergryph.*
+
+组内邮箱：missercatos@misser.top 或 个人邮箱：catos@misser.top / 303096049@qq.com

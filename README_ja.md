@@ -178,3 +178,5 @@ src/
 音楽コンテンツは [Monster Siren Records](https://monster-siren.hypergryph.com) / Hypergryph により提供されています。
 
 *本プロジェクトはコミュニティ開発の非公式クライアントであり、Hypergryph とは無関係です。*
+
+組内メール：missercatos@misser.top または 個人メール：catos@misser.top / 303096049@qq.com

@@ -178,3 +178,5 @@ src/
 音乐内容由 [塞壬唱片 (Monster Siren Records)](https://monster-siren.hypergryph.com) / 鹰角网络提供。
 
 *本项目为社区开发的非官方客户端，与鹰角网络无附属关系。*
+
+组内邮箱：missercatos@misser.top 或 个人邮箱：catos@misser.top / 303096049@qq.com
