@@ -1,5 +1,7 @@
 # msplayer
 
+![Rust](https://img.shields.io/badge/Rust-2024-orange) ![Version](https://img.shields.io/badge/version-0.1.0-brightgreen)
+
 > A Monster Siren Records streaming client with shared kernel architecture.
 
 [English](README.md) | [简体中文](README_zh.md) | [日本語](README_ja.md)
