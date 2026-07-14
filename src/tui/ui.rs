@@ -1,8 +1,8 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Cell, Paragraph, Row, Table},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table, Wrap},
     Frame,
 };
 
@@ -143,10 +143,10 @@ fn draw_left(f: &mut Frame, app: &App, area: Rect) {
     draw_bottom(f, app, v_chunks[1]);
 }
 
-/// 显示专辑简介 + 歌曲信息 + 进度条（每行9字隐形txt格式）
+/// 显示专辑简介 + 歌曲信息 + 进度条
 fn draw_info(f: &mut Frame, app: &App, area: Rect) {
     let mut lines: Vec<Line> = vec![];
-    let char_width = 25usize;
+    let char_width = (area.width as usize).saturating_sub(2);
 
     if let Some(ref intro) = app.engine.album_intro {
         for line_text in wrap_text(intro, char_width) {
@@ -162,7 +162,7 @@ fn draw_info(f: &mut Frame, app: &App, area: Rect) {
     }
 
     if let Some(ref info) = app.engine.song_info {
-        for line_text in wrap_text(info, char_width) {
+        for line_text in wrap_text(info, (area.width as usize).saturating_sub(2)) {
             lines.push(Line::from(Span::styled(
                 line_text,
                 Style::default().fg(Color::White),
@@ -212,7 +212,9 @@ fn draw_info(f: &mut Frame, app: &App, area: Rect) {
         ));
     }
 
-    let p = Paragraph::new(lines);
+    let p = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .alignment(Alignment::Center);
     f.render_widget(p, display_area);
 }
 
@@ -244,8 +246,8 @@ fn draw_bottom(f: &mut Frame, app: &App, area: Rect) {
             ("j/k, ↓/↑", "Prev/Next song"),
             ("A/D (Shift)", "Prev/Next song"),
             ("a/d", "Seek backward/forward 5%"),
-            ("Space", "Play selected song"),
-            ("x", "Pause / Resume"),
+            ("Enter", "Play selected song"),
+            ("Space", "Pause / Resume"),
             ("e", "Cycle play mode"),
             ("o", "Volume -5%"),
             ("p", "Volume +5%"),

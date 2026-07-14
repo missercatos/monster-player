@@ -57,8 +57,8 @@ pub fn handle_key(app: &mut App, key: &KeyEvent) -> bool {
     match key.code {
         KeyCode::Char('q') => return false,
         KeyCode::Char('/') => app.enter_search(),
-        KeyCode::Char(' ') => app.play_selected(),
-        KeyCode::Char('x') => app.toggle_pause(),
+        KeyCode::Enter => app.play_selected(),
+        KeyCode::Char(' ') => app.toggle_pause(),
         KeyCode::Char('e') => app.cycle_mode(),
         KeyCode::Char('o') => app.volume_down(),
         KeyCode::Char('p') => app.volume_up(),
