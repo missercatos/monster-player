@@ -1,0 +1,69 @@
+name: Publish to AUR
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  aur-publish:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install system dependencies
+        run: pacman -Syu --noconfirm base-devel git openssh
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute sha256sum
+        id: compute
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          URL="https://github.com/${{ github.repository }}/archive/$TAG.tar.gz"
+          curl -sL "$URL" -o /tmp/source.tar.gz
+          SHA256=$(sha256sum /tmp/source.tar.gz | cut -d' ' -f1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          cat >> ~/.ssh/config << 'CONF'
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            StrictHostKeyChecking no
+          CONF
+
+      - name: Clone AUR repo
+        run: git clone ssh://aur@aur.archlinux.org/msplayer-tui.git /tmp/aur-repo
+
+      - name: Update PKGBUILD
+        run: |
+          cp aur/PKGBUILD /tmp/aur-repo/PKGBUILD
+          cd /tmp/aur-repo
+          sed -i "s/pkgver=.*/pkgver=${{ steps.compute.outputs.version }}/" PKGBUILD
+          sed -i "s/pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s/sha256sums=('SKIP')/sha256sums=('${{ steps.compute.outputs.sha256 }}')/" PKGBUILD
+
+      - name: Generate .SRCINFO
+        run: |
+          cd /tmp/aur-repo
+          useradd -m builder
+          chown -R builder:builder /tmp/aur-repo
+          su builder -c "makepkg --printsrcinfo" > .SRCINFO
+
+      - name: Commit and push to AUR
+        run: |
+          cd /tmp/aur-repo
+          git config user.name "misser-catos"
+          git config user.email "catos@misser.top"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to v${{ steps.compute.outputs.version }}"
+          git push origin master

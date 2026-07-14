@@ -31,3 +31,4 @@ AUR/
 # Added by cargo
 
 /target
+aur/.SRCINFO
