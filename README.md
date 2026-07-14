@@ -1,6 +1,6 @@
 # msplayer
 
-![Rust](https://img.shields.io/badge/Rust-2024-orange) ![Version](https://img.shields.io/badge/version-0.1.0-brightgreen)
+![Rust](https://img.shields.io/badge/Rust-2024-orange) ![Version](https://img.shields.io/badge/version-0.1.0-brightgreen) ![AUR](https://img.shields.io/badge/AUR-msplayer--tui-blue)
 
 > A Monster Siren Records streaming client with shared kernel architecture.
 
@@ -41,6 +41,15 @@
 | ![](introduce/GUI-origin.png) | ![](introduce/GUI-tty.png) | ![](introduce/GUI-tokyonight.png) |
 
 ## Getting Started
+
+### AUR (Arch Linux)
+
+`msplayer-tui` is available on the AUR:
+
+```bash
+yay -S msplayer-tui
+msplayer-tui
+```
 
 ### Pre-built Binaries
 
@@ -171,7 +180,7 @@ src/
 - [x] TUI player
 - [x] GUI player -- transparent window, custom title bar
 - [ ] Windows installer (NSIS / WiX)
-- [ ] Linux packages (AUR / deb / rpm)
+- [x] Linux packages (AUR)
 - [ ] Android port
 - [ ] Additional themes
 
