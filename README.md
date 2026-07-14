@@ -1,6 +1,6 @@
 # msplayer
 
-![Rust](https://img.shields.io/badge/Rust-2024-orange) ![Version](https://img.shields.io/badge/version-0.1.0-brightgreen) ![AUR](https://img.shields.io/badge/AUR-msplayer--tui-blue)
+![Rust](https://img.shields.io/badge/Rust-2024-orange) ![Version](https://img.shields.io/badge/version-0.1.1-brightgreen) ![AUR](https://img.shields.io/badge/AUR-msplayer--tui-blue)
 
 > A Monster Siren Records streaming client with shared kernel architecture.
 

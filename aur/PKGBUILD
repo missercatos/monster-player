@@ -1,20 +1,20 @@
 # Maintainer: misser-catos <catos@misser.top>
 
 pkgname=msplayer-tui
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="A TUI music player for Monster Siren Records"
 arch=('x86_64')
 url="https://github.com/missercatos/monster-player"
 license=('MIT')
 depends=('alsa-lib' 'gcc-libs')
-makedepends=('cargo')
+makedepends=('cargo' 'pkg-config')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/missercatos/monster-player/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 build() {
     cd "monster-player-$pkgver"
-    CFLAGS="-fno-lto" cargo build --release --frozen
+    CFLAGS="-fno-lto" cargo build --release --locked
 }
 
 package() {
