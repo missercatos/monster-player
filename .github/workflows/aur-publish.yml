@@ -33,12 +33,12 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
           echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/aur
           chmod 600 ~/.ssh/aur
           cat >> ~/.ssh/config << 'CONF'
           Host aur.archlinux.org
             IdentityFile ~/.ssh/aur
-            StrictHostKeyChecking no
           CONF
 
       - name: Clone AUR repo
