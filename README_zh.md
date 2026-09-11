@@ -4,6 +4,8 @@
 
 [English](README.md) | [简体中文](README_zh.md) | [日本語](README_ja.md)
 
+# monster-player将在近期进行第三次重构，这一次我们会采用Flutter前端+GO后端+PostgreSQL/Redis数据层。在客户端，将会以Flutter为核心，追求全新的UI和动画效果，并实现跨平台。后端使用GO构建高性能微服务，处理高并发业务，并通过标准API与鹰角生态对接。数据曾以PostggreSQL保核心，Redis抗并发。且将会花费大量时间投入自研的时间戳歌词动画引擎，新的项目将会被赋予分支版本标签 RS-v,我们将会保留旧版本msplayer和msplayer内核，敬请期待.....
+
 ---
 
 ## 概述
