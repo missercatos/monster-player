@@ -1,179 +1,177 @@
-# msplayer
+# monster-player · RS
 
-> 共享内核架构的塞壬唱片流媒体客户端。
+![Flutter](https://img.shields.io/badge/Flutter-Dart-02569B) ![Java](https://img.shields.io/badge/Java-Spring%20Boot%203-6DB33F) ![Go](https://img.shields.io/badge/Go-Gin%20%2B%20gRPC-00ADD8) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1) ![Redis](https://img.shields.io/badge/Redis-7-DC382D) ![Kafka](https://img.shields.io/badge/Kafka-3.x-231F20) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Docker-326CE5) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Status](https://img.shields.io/badge/status-planning-orange)
+
+> 塞壬唱片 (Monster Siren Records) 跨平台音乐播放器 · 第三次重构 · RS 系列
 
 [English](README.md) | [简体中文](README_zh.md) | [日本語](README_ja.md)
 
-# monster-player将在近期进行第三次重构，这一次我们会采用Flutter前端+GO后端+PostgreSQL/Redis数据层。在客户端，将会以Flutter为核心，追求全新的UI和动画效果，并实现跨平台。后端使用GO构建高性能微服务，处理高并发业务，并通过标准API与鹰角生态对接。数据曾以PostggreSQL保核心，Redis抗并发。且将会花费大量时间投入自研的时间戳歌词动画引擎，新的项目将会被赋予分支版本标签 RS-v,我们将会保留旧版本msplayer和msplayer内核，敬请期待.....
-
 ---
 
-## 概述
+## 项目正在重构
 
-**msplayer** 是一款非官方的 [塞壬唱片](https://monster-siren.hypergryph.com) 桌面音乐播放器，采用共享内核架构 -- 所有播放逻辑、数据缓存和 API 交互集中在核心引擎中，UI 层可插拔替换。
+monster-player 即将启动**第三次重构**，以全新的架构重建，并作为独立发行版（RS 系列，版本标签 `RS-v`）发布。
 
-## 功能
+- 新架构的完整规划见 [docs/PLAN.md](docs/PLAN.md)（当前为规划阶段，尚未开始实现）
+- 旧版本（Rust 内核 + TUI / GUI 双前端）完整保留在 `main` 分支、Releases 与 AUR，继续可用
+- 本分支（`new_ms`）是新架构的起点：保留了塞壬 API 参考实现与契约知识，其余旧代码已清理
 
-| 功能 | 说明 |
+## 为什么要重构
+
+旧版用一个 Rust 内核同时驱动 TUI 与 GUI，验证了"共享内核"的可行性，但也遇到了瓶颈：
+
+| 瓶颈 | 说明 |
 |------|------|
-| 流式播放 | 渐进式下载，8 MB 缓冲 -- 歌曲在完整下载完成前即可开始播放 |
-| 终端界面 (TUI) | 全 ratatui 界面，纯键盘操作（vim 风格 hjkl） |
-| 桌面 GUI | eframe/egui 透明悬浮窗口，自定义标题栏、播放控件和搜索弹窗 |
-| 收藏系统 | 按 `s` 收藏/取消收藏，持久化到 `~/.config/msplayer/loved.json` |
-| 搜索 | 按 `/` 打开 Spotlight 风格搜索弹窗，跨专辑搜索 |
-| 同步歌词 | LRC 歌词解析，播放时实时高亮当前歌词行 |
-| 播放模式 | 专辑列表 / 专辑随机 / 全局列表 / 全局随机 / 单曲循环 / 收藏列表 / 收藏随机 |
-| 跨平台 | Linux、Windows、macOS -- 自动检测系统 CJK 字体 |
-| 主题 | 3 套内置主题：Origin（暗色青）、TTY（黑白）、Tokyonight（蓝紫） |
+| 前端表现力 | 终端与 egui 难以承载复杂的歌词动画与现代化 UI |
+| 平台覆盖 | 移动端缺失，Android / iOS 无路径 |
+| 服务端能力 | 无账号、评论、排行榜、推送等在线能力 |
+| 规模上限 | 单机播放器架构无法支撑社交与高并发场景 |
 
-## 截图
+新版本选择 Flutter 一套代码覆盖三端，后端以 Java + Go 双栈承载业务与高并发，数据层以 PostgreSQL 保核心、Redis 抗并发、Kafka 削峰解耦。
 
-### TUI
-
-| 主界面 | 歌词 |
-|--------|------|
-| ![](introduce/TUI-origin.png) | ![](introduce/TUI-origin-1.png) |
-
-### GUI
-
-| Origin | TTY | Tokyonight |
-|--------|-----|------------|
-| ![](introduce/GUI-origin.png) | ![](introduce/GUI-tty.png) | ![](introduce/GUI-tokyonight.png) |
-
-## 快速开始
-
-### 预编译二进制
-
-从 [Releases](https://github.com/your-username/monster-player/releases) 页面下载对应平台的二进制文件：
-
-| 文件 | 平台 | 类型 |
-|------|------|------|
-| `msplayer-tui` | Linux x86_64 | TUI |
-| `msplayer-gui` | Linux x86_64 | GUI |
-| `msplayer-gui.exe` | Windows x86_64 | GUI |
-
-**Linux** -- 将二进制文件放入 `PATH`，终端直接运行：
-
-```bash
-chmod +x msplayer-tui msplayer-gui
-sudo cp msplayer-tui /usr/local/bin/
-sudo cp msplayer-gui /usr/local/bin/
-
-msplayer-tui   # TUI
-msplayer-gui   # GUI
-```
-
-**Windows** -- 双击 `msplayer-gui.exe` 即可启动。(๑•̀ㅂ•́)و✧ 桌面快捷方式和安装包正在制作中，请耐心等待~
-
-### 从源码构建
-
-```bash
-git clone https://github.com/your-username/monster-player.git
-cd monster-player
-
-# TUI
-cargo build --release
-
-# GUI
-cargo build --release --features gui
-```
-
-## 使用说明
-
-### 快捷键
-
-| 按键 | 功能 |
-|------|------|
-| `Space` | 播放选中歌曲 |
-| `x` | 暂停 / 恢复 |
-| `h` / `l` 或 `Left` / `Right` | 上 / 下专辑 |
-| `j` / `k` 或 `Down` / `Up` | 上 / 下歌曲（浏览模式） |
-| `Shift+A` / `Shift+D` | 上一首 / 下一首（立即播放） |
-| `a` / `d` | 进度后退 / 前进 |
-| `e` | 切换播放模式 |
-| `o` / `p` | 音量减 / 增 |
-| `v` | 歌词显示切换 |
-| `s` | 收藏 / 取消收藏 |
-| `Ctrl+T` | 设置 / 帮助 |
-| `/` | 搜索 |
-| `Esc` | 关闭弹窗 / 退出搜索 |
-
-### 鼠标操作（仅 GUI）
-
-| 操作 | 效果 |
-|------|------|
-| 右侧面板滚轮 | 浏览歌曲 |
-| 点击播放模式文字 | 切换模式 |
-| 点击 `<` / `>` 按钮 | 上一首 / 下一首 |
-| 点击 `||` / `>` 切换 | 暂停 / 播放 |
-| 拖拽进度条 | 跳转进度 |
-| 点击搜索图标（右上角） | 打开搜索弹窗 |
-| 双击搜索结果 | 跳转到歌曲 |
-
-## 架构
+## 新架构总览
 
 ```mermaid
-graph TB
-    subgraph UI["UI 层"]
-        T["TUI<br/>ratatui"]
-        G["GUI<br/>eframe/egui"]
+flowchart LR
+    subgraph C["客户端"]
+        F["Flutter / Dart<br/>Android · iOS · Windows · macOS · Linux · Web"]
+        MP["小程序<br/>Taro / uni-app"]
     end
 
-    subgraph KERNEL["共享内核"]
-        direction LR
-        E["引擎<br/>状态 · 缓存 · 流式 · 歌词"]
-        P["播放器<br/>rodio 音频后端"]
-        A["API<br/>ureq HTTP 客户端 + 类型"]
+    subgraph E["接入层 (Go)"]
+        GW["API 网关 / BFF"]
+        WS["WebSocket 推送"]
+        PX["塞壬 API 代理<br/>缓存 · 限流"]
     end
 
-    T --- KERNEL
-    G --- KERNEL
-    E --- P
-    E --- A
+    subgraph B["业务层 (Java · Spring Boot 3)"]
+        U["账号 / OAuth2 / 游戏绑定"]
+        S["评论 / 帖子 / 收藏"]
+        L["听歌等级 / 数据统计"]
+    end
 
-    style UI fill:#2a2a3e,stroke:#555,color:#ddd
-    style KERNEL fill:#1a1a2e,stroke:#0cf,color:#fff
-    style T fill:#0d2818,stroke:#0f8,color:#fff
-    style G fill:#2a1a0e,stroke:#fa0,color:#fff
-    style E fill:#111,stroke:#0cf,color:#fff
-    style P fill:#111,stroke:#0cf,color:#fff
-    style A fill:#111,stroke:#0cf,color:#fff
+    subgraph D["数据层"]
+        PG[("PostgreSQL")]
+        RD[("Redis")]
+        KF[["Kafka"]]
+        OS[("对象存储 + CDN")]
+    end
+
+    SIREN["塞壬唱片 API"]
+
+    F --> GW
+    MP --> GW
+    GW --> U
+    GW --> S
+    GW --> L
+    GW --> PX
+    U --> PG
+    S --> PG
+    L --> PG
+    GW --> RD
+    S -. Outbox .-> KF
+    KF --> WS
+    WS -. 推送 .-> F
+    PX --> SIREN
+    F --> OS
 ```
 
-## 项目结构
+## 技术栈总表
+
+| 层次 | 技术选型 |
+|------|----------|
+| 客户端（App/桌面/Web） | Flutter + Dart |
+| 客户端（小程序） | Taro / uni-app + TypeScript |
+| 客户端本地库 | Drift (SQLite) |
+| 后端（业务） | Java + Spring Boot 3 |
+| 后端（高并发） | Go + Gin/Echo |
+| 后端（预留） | Rust、Python、Node.js |
+| 关系数据库 | PostgreSQL |
+| 缓存/排行 | Redis |
+| 消息队列 | Kafka |
+| 搜索 | Elasticsearch（可选） |
+| 对象存储 | S3 / OSS + CDN |
+| 契约 | OpenAPI + gRPC/Protobuf + AsyncAPI |
+| 容器 | Docker |
+| 编排 | Kubernetes |
+| 服务网格 | Istio |
+| API 网关 | Kong / Envoy / APISIX |
+| 多语言构建 | Bazel 或 CI 统一调度 |
+| 可观测性 | OpenTelemetry + Prometheus + Grafana + Loki |
+| 配置/开关 | Nacos / Apollo + Unleash |
+| 后台前端 | React + Ant Design |
+
+## 契约驱动
+
+契约是唯一真相源。所有语言从 `contracts/` 生成 SDK，不手写接口定义。
+
+| 契约 | 技术 | 用途 |
+|------|------|------|
+| REST API | OpenAPI 3.0 | 对外接口，自动生成各语言 SDK |
+| 内部通信 | gRPC + Protobuf | Java ↔ Go ↔ 未来语言，高性能强类型 |
+| 异步事件 | AsyncAPI | Kafka 事件 schema，新模块订阅 |
+| 通用 Schema | JSON Schema | 播放事件、用户操作等 |
+
+细节见 [contracts/README.md](contracts/README.md)。
+
+## 目标仓库结构
 
 ```
-src/
-├── lib.rs              库入口
-├── main.rs             二进制入口 (feature 分发)
-├── kernel.rs           核心引擎
-├── player.rs           音频播放器 (rodio)
-├── error.rs            错误类型
-├── api/
-│   ├── mod.rs
-│   ├── types.rs        API 响应类型
-│   └── client.rs       HTTP 客户端 (ureq)
-├── tui/                终端界面
-│   ├── mod.rs          crossterm 初始化 + 事件循环
-│   ├── app.rs          UI 状态壳
-│   ├── event.rs        键盘事件映射
-│   └── ui.rs           布局 + 渲染
-└── origin_gui/         桌面 GUI
-    ├── mod.rs          无边框透明窗口
-    ├── app.rs          GUI 状态
-    ├── ui.rs           布局 + 渲染
-    ├── theme.rs        主题系统 (3 套主题)
-    └── settings.rs     设置弹窗
+monster-player/
+├── clients/
+│   └── flutter/          # Flutter 客户端（三端同源）
+├── services/
+│   ├── java/             # Spring Boot 业务服务
+│   ├── go/               # 网关 / BFF / 事件 / 塞壬代理
+│   ├── rust/             # 预留：音频处理、转码
+│   └── python/           # 预留：AI 推荐、数据分析
+├── contracts/            # 契约唯一真相源（OpenAPI / Protobuf / AsyncAPI）
+├── admin/                # 后台管理前端（React + Ant Design）
+├── deploy/               # Docker / Kubernetes / Helm
+├── tools/
+│   └── siren-ref/        # 塞壬 API 参考实现（Rust CLI）
+└── docs/                 # 规划与接口文档
 ```
+
+## 当前分支保留了什么
+
+本分支是一次"清理 + 奠基"，只保留重建所需的资产：
+
+| 资产 | 说明 |
+|------|------|
+| [docs/monster-siren-api.md](docs/monster-siren-api.md) | 塞壬唱片 API 契约知识：端点、字段、错误码、CDN 直链格式 |
+| [tools/siren-ref](tools/siren-ref) | 经过验证的 Rust 参考客户端（CLI）：可拉取真实响应生成 JSON fixture，供契约测试与网关对照验证 |
+| [contracts/](contracts/) | 契约目录占位与约定说明 |
+| [docs/PLAN.md](docs/PLAN.md) | 第三次重构完整规划 |
+
+旧 Rust 内核、TUI / GUI 前端、C FFI 绑定、Python bindings、AUR 打包与旧 CI 已从本分支移除，全部可从 `main` 找回。
+
+## 为什么保留一个 Rust 工具
+
+新架构中 Rust 不再承担接口角色 —— 契约（OpenAPI / Protobuf / AsyncAPI）才是唯一真相源，塞壬代理由 Go 实现。但旧 Rust 客户端是一份经过真实数据验证的塞壬 API 参考实现，因此精简为 `tools/siren-ref`：
+
+- 拉取真实响应，生成契约测试 fixture
+- 作为 Go 代理实现的对照物（`--base-url` 可指向未来的 Go 网关，对比响应差异）
+- 与"Rust 预留：音频处理、转码"的技术栈定位一致
 
 ## 路线图
 
-- [x] TUI 播放器
-- [x] GUI 播放器 -- 透明窗口，自定义标题栏
-- [ ] Windows 安装程序 (NSIS / WiX)
-- [ ] Linux 包管理 (AUR / deb / rpm)
-- [ ] Android 移植
-- [ ] 更多主题
+- [ ] P0 契约与仓库骨架：contracts 初始化、CI、代码生成流水线
+- [ ] P1 Go 接入层：API 网关 / BFF、塞壬 API 代理（缓存 + 限流）、WebSocket 通道
+- [ ] P2 Java 业务层：账号与鹰角通行证 OAuth2、游戏绑定、收藏、评论、帖子
+- [ ] P3 Go 高并发：播放事件同步、计数、Redis 排行榜
+- [ ] P4 Flutter 客户端：三端壳工程 + 播放引擎 + 自研时间戳歌词动画引擎
+- [ ] P5 数据与运维：Kafka 事件、Flyway 迁移、可观测性、K8s 部署
+- [ ] P6 后台管理与数据统计
+
+## 旧版本
+
+| 渠道 | 说明 |
+|------|------|
+| `main` 分支 | 旧版完整源码（Rust 内核 + TUI + GUI） |
+| Releases | `msplayer-tui` / `msplayer-gui` / `msplayer-gui.exe` 预编译二进制 |
+| AUR | `yay -S msplayer-tui` |
 
 ## 致谢
 

@@ -1,24 +1,30 @@
-use serde::Deserialize;
+//! Monster Siren Records API 响应类型定义。
+//!
+//! 字段与上游 JSON 一一对应（camelCase），同时支持序列化，
+//! 用于生成契约测试所需的 JSON fixture。
+//! 人类可读的接口说明见 `docs/monster-siren-api.md`。
 
-/// 通用 API 响应包装
+use serde::{Deserialize, Serialize};
+
+/// 通用 API 响应包装。
 ///
 /// `T` 为具体数据类型（如 `Vec<Album>`、`AlbumDetail`、`SearchResponse` 等）。
 /// 所有接口返回的统一外层结构。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiResponse<T> {
     /// 状态码，0 表示成功
     pub code: i32,
     /// 状态描述信息
     pub msg: String,
-    /// 响应数据体
-    pub data: T,
+    /// 响应数据体；失败响应时可能为 null
+    pub data: Option<T>,
 }
 
 /// 专辑列表项
 ///
 /// 用于 `/api/albums` 接口返回的专辑摘要信息。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Album {
     /// 专辑唯一标识
     pub cid: String,
@@ -35,7 +41,7 @@ pub struct Album {
 ///
 /// 用于 `/api/album/{cid}/detail` 接口。
 /// 相比 `Album` 增加了专辑介绍、所属分类、封面主图等字段以及内含歌曲列表。
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumDetail {
     /// 专辑唯一标识
@@ -58,7 +64,7 @@ pub struct AlbumDetail {
 ///
 /// 嵌套在 `AlbumDetail.songs` 中，
 /// 仅包含歌曲基本标识信息，不包含音源直链。
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AlbumSong {
     /// 歌曲唯一标识
     pub cid: String,
@@ -72,7 +78,7 @@ pub struct AlbumSong {
 ///
 /// 用于 `/api/songs` 接口（全量歌曲列表），
 /// 仅含基本元信息，不含音源地址。
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Song {
     /// 歌曲唯一标识
@@ -89,7 +95,7 @@ pub struct Song {
 ///
 /// 用于 `/api/song/{cid}` 接口。
 /// 包含可直接播放的 WAV 音频源 URL、歌词文件 URL 及可选的 MV 资源。
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SongDetail {
     /// 歌曲唯一标识
@@ -113,7 +119,7 @@ pub struct SongDetail {
 /// 歌曲列表接口的响应数据体
 ///
 /// `/api/songs` 接口返回的内层包装结构。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SongsResponse {
     /// 歌曲摘要列表
@@ -123,7 +129,7 @@ pub struct SongsResponse {
 /// 新闻动态条目
 ///
 /// 用于 `/api/news` 接口返回的新闻摘要信息。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewsItem {
     /// 新闻唯一标识
@@ -140,7 +146,7 @@ pub struct NewsItem {
 ///
 /// `/api/news` 接口返回的内层包装结构。
 /// 支持分页判断。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewsResponse {
     /// 新闻条目列表
@@ -153,7 +159,7 @@ pub struct NewsResponse {
 ///
 /// `T` 为具体条目类型（`Album` 或 `NewsItem`）。
 /// 用于 `/api/search` 接口中的内层嵌套数据结构。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchList<T> {
     /// 搜索结果列表
@@ -166,7 +172,7 @@ pub struct SearchList<T> {
 ///
 /// `/api/search?keyword=` 接口返回的内层包装结构。
 /// 同时包含专辑和新闻两类搜索结果。
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResponse {
     /// 匹配到的专辑搜索结果

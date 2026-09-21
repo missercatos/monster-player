@@ -1,34 +1,54 @@
+# --- 构建产物 ---
 /target/
+target/
+build/
+dist/
+.dart_tool/
+.packages
+node_modules/
+*.class
+*.jar
+
+# --- Rust ---
 **/*.rs.bk
 
-# OS / editor
-.DS_Store
-Thumbs.db
+# --- Flutter / Dart ---
+.flutter-plugins
+.flutter-plugins-dependencies
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# --- Java ---
+.gradle/
+*.iml
+
+# --- Go ---
+/bin/
+
+# --- IDE / 编辑器 ---
+.idea/
+.vscode/
 *.swp
 *.swo
-*.tmp
-*.log
 
-# VS Code
-.vscode/
+# --- 系统 ---
+.DS_Store
+Thumbs.db
 
-# Rustfmt / clippy caches (if any)
-.rustc_info.json
-
-# process file
+# --- 本地私有 ---
+.env
+.env.*
+*.local
 Prd.md
 product_roadmap_v1.md
 tech_architecture_doc.md
 architecture_blueprint.mermaid
 /参考/
 /releases/
-
-.venv/
 temp/
+.venv/
 
-AUR/
-
-# Added by cargo
-
-/target
-aur/.SRCINFO
+# --- 其他 ---
+*.tmp
+*.log

@@ -1,4 +1,7 @@
-# Monster Siren API 文档
+# 塞壬唱片 API 契约知识
+
+> 本文档记录塞壬唱片（Monster Siren Records）公开接口的端点、字段与资源格式，是 RS 重构的保留参考资产。
+> 机器可读契约将在 `contracts/openapi/` 中正式定义；本文档负责沉淀上游事实，供 Go 代理实现与契约测试对照。
 
 Base URL: `https://monster-siren.hypergryph.com`
 
@@ -149,3 +152,27 @@ https://res01.hycdn.cn/{hash1}/{hash2}/siren/audio/{date}/{hash3}.wav
 ```
 https://web.hycdn.cn/siren/pic/{date}/{hash}.{png|jpg}
 ```
+
+歌词资源：
+
+```
+https://web.hycdn.cn/siren/lyric/{date}/{hash}.lrc
+```
+
+---
+
+## 参考实现与 Fixture
+
+[`tools/siren-ref`](../tools/siren-ref) 是本文档全部只读接口的 Rust 参考实现（已验证）：
+
+```bash
+cargo run -p siren-ref -- albums
+cargo run -p siren-ref -- album 7760 -o fixtures/album-7760.json
+cargo run -p siren-ref -- song 953936
+cargo run -p siren-ref -- lyrics 953936
+cargo run -p siren-ref -- search "月行"
+```
+
+- `--base-url` 可指向自建 Go 网关，用于对照验证响应一致性
+- 输出 JSON 可直接作为跨语言契约测试 fixture
+- 无效 cid 返回 `API error: code=104, msg=can't find target`（业务错误在 HTTP 层仍为 200）

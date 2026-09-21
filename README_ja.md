@@ -1,181 +1,181 @@
-# msplayer
+# monster-player · RS
 
-> 共有カーネルアーキテクチャの Monster Siren Records ストリーミングクライアント。
+![Flutter](https://img.shields.io/badge/Flutter-Dart-02569B) ![Java](https://img.shields.io/badge/Java-Spring%20Boot%203-6DB33F) ![Go](https://img.shields.io/badge/Go-Gin%20%2B%20gRPC-00ADD8) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1) ![Redis](https://img.shields.io/badge/Redis-7-DC382D) ![Kafka](https://img.shields.io/badge/Kafka-3.x-231F20) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Docker-326CE5) ![License](https://img.shields.io/badge/license-MIT-blue)
+![Status](https://img.shields.io/badge/status-planning-orange)
+
+> セイレーン・レコード (Monster Siren Records) クロスプラットフォームプレイヤー · 三度目のリビルド · RS シリーズ
 
 [English](README.md) | [简体中文](README_zh.md) | [日本語](README_ja.md)
 
 ---
 
-## 概要
+## プロジェクトはリビルド中です
 
-**msplayer** は、[Monster Siren Records](https://monster-siren.hypergryph.com) の非公式デスクトップ音楽プレイヤーです。共有カーネルアーキテクチャを採用し、再生ロジック、データキャッシュ、API通信はすべてコアエンジンに集約。UIはプラグイン可能です。
+monster-player は**三度目のリビルド**を開始します。まったく新しいアーキテクチャで再構築し、独立したディストリビューション（RS シリーズ、バージョンタグ `RS-v`）としてリリースします。
 
-## 機能
+- 新アーキテクチャの全計画は [docs/PLAN.md](docs/PLAN.md)（現在は計画段階で、実装は未着手）
+- 旧バージョン（Rust カーネル + TUI / GUI）は `main` ブランチ、Releases、AUR で引き続き利用できます
+- このブランチ（`new_ms`）は新アーキテクチャの出発点です。セイレーン API のリファレンス実装と契約知識を保持し、それ以外の旧コードは削除しました
 
-| 機能 | 説明 |
+## なぜリビルドするのか
+
+旧バージョンは 1 つの Rust カーネルで TUI と GUI を駆動し、「共有カーネル」の可能性を実証しましたが、限界も明確になりました：
+
+| 限界 | 説明 |
 |------|------|
-| ストリーミング再生 | プログレッシブダウンロード、8 MBバッファ -- ダウンロード完了前に再生開始 |
-| 端末 UI (TUI) | ratatui による全画面インターフェース、キーボードのみで操作（vim 風 hjkl） |
-| デスクトップ GUI | eframe/egui 透明オーバーレイウィンドウ、カスタムタイトルバー、再生コントロール、検索ポップアップ |
-| お気に入り | `s` キーでお気に入り登録 -- `~/.config/msplayer/loved.json` に永続化 |
-| 検索 | `/` キーで Spotlight 風の検索ポップアップ -- 全アルバム横断検索 |
-| 同期歌詞 | LRC 歌詞解析、再生位置に合わせてリアルタイムハイライト |
-| 再生モード | アルバム順 / アルバムランダム / 全曲順 / 全曲ランダム / 単曲リピート / お気に入り順 / お気に入りランダム |
-| クロスプラットフォーム | Linux、Windows、macOS -- システムの CJK フォントを自動検出 |
-| テーマ | 3 種類の内蔵テーマ: Origin（ダークシアン）、TTY（モノクロ）、Tokyonight（青紫） |
+| UI 表現力 | ターミナルと egui では複雑な歌詞アニメーションや現代的な UI を実現しにくい |
+| プラットフォーム | Android / iOS へのモバイル展開の道がない |
+| オンライン機能 | アカウント、コメント、ランキング、プッシュ通知などの機能がない |
+| 規模の上限 | 単体プレイヤー構成ではソーシャルや高並行のワークロードを支えられない |
 
-## スクリーンショット
+新バージョンは Flutter で 6 プラットフォームを 1 つのコードベースでカバーし、Java + Go のバックエンドで業務処理と高並行を担い、データ層は PostgreSQL が中核、Redis が並行処理、Kafka が疎結合を担当します。
 
-### TUI
-
-| メイン | 歌詞 |
-|--------|------|
-| ![](introduce/TUI-origin.png) | ![](introduce/TUI-origin-1.png) |
-
-### GUI
-
-| Origin | TTY | Tokyonight |
-|--------|-----|------------|
-| ![](introduce/GUI-origin.png) | ![](introduce/GUI-tty.png) | ![](introduce/GUI-tokyonight.png) |
-
-## はじめ方
-
-### ビルド済みバイナリ
-
-[Releases](https://github.com/your-username/monster-player/releases) ページから各プラットフォーム向けのバイナリをダウンロード：
-
-| ファイル | プラットフォーム | 種類 |
-|----------|------------------|------|
-| `msplayer-tui` | Linux x86_64 | TUI |
-| `msplayer-gui` | Linux x86_64 | GUI |
-| `msplayer-gui.exe` | Windows x86_64 | GUI |
-
-**Linux** -- バイナリを `PATH` に配置して端末から実行：
-
-```bash
-chmod +x msplayer-tui msplayer-gui
-sudo cp msplayer-tui /usr/local/bin/
-sudo cp msplayer-gui /usr/local/bin/
-
-msplayer-tui   # TUI
-msplayer-gui   # GUI
-```
-
-**Windows** -- `msplayer-gui.exe` をダブルクリックするだけで起動します。(๑•̀ㅂ•́)و✧ デスクトップショートカットとインストーラは準備中です、少々お待ちください~
-
-### ソースからビルド
-
-```bash
-git clone https://github.com/your-username/monster-player.git
-cd monster-player
-
-# TUI
-cargo build --release
-
-# GUI
-cargo build --release --features gui
-```
-
-## 使用方法
-
-### キーボードショートカット
-
-| キー | 操作 |
-|------|------|
-| `Space` | 選択曲を再生 |
-| `x` | 一時停止 / 再開 |
-| `h` / `l` または `Left` / `Right` | 前 / 次のアルバム |
-| `j` / `k` または `Down` / `Up` | 前 / 次の曲（閲覧モード） |
-| `Shift+A` / `Shift+D` | 前 / 次の曲へスキップ（即時再生） |
-| `a` / `d` | シーク（戻る / 進む） |
-| `e` | 再生モード切替 |
-| `o` / `p` | 音量 下 / 上 |
-| `v` | 歌詞表示切替 |
-| `s` | お気に入り切替 |
-| `Ctrl+T` | 設定 / ヘルプ |
-| `/` | 検索 |
-| `Esc` | ポップアップを閉じる / 検索終了 |
-
-### マウス操作（GUI のみ）
-
-| 操作 | 効果 |
-|------|------|
-| 右パネルでスクロール | 曲の閲覧 |
-| 再生モードテキストをクリック | モード切替 |
-| `<` / `>` ボタンをクリック | 前 / 次の曲 |
-| `||` / `>` 切替をクリック | 一時停止 / 再生 |
-| プログレスバーをドラッグ | シーク |
-| 検索アイコン（右上）をクリック | 検索ポップアップを開く |
-| 検索結果をダブルクリック | 曲へジャンプ |
-
-## アーキテクチャ
+## アーキテクチャ概要
 
 ```mermaid
-graph TB
-    subgraph UI["UI 層"]
-        T["TUI<br/>ratatui"]
-        G["GUI<br/>eframe/egui"]
+flowchart LR
+    subgraph C["クライアント"]
+        F["Flutter / Dart<br/>Android · iOS · Windows · macOS · Linux · Web"]
+        MP["ミニプログラム<br/>Taro / uni-app"]
     end
 
-    subgraph KERNEL["共有カーネル"]
-        direction LR
-        E["エンジン<br/>状態 · キャッシュ · ストリーミング · 歌詞"]
-        P["プレイヤー<br/>rodio オーディオバックエンド"]
-        A["API<br/>ureq HTTP クライアント + 型"]
+    subgraph E["エッジ層 (Go)"]
+        GW["API ゲートウェイ / BFF"]
+        WS["WebSocket プッシュ"]
+        PX["セイレーン API プロキシ<br/>キャッシュ · レート制限"]
     end
 
-    T --- KERNEL
-    G --- KERNEL
-    E --- P
-    E --- A
+    subgraph B["業務層 (Java · Spring Boot 3)"]
+        U["アカウント / OAuth2 / ゲーム連携"]
+        S["コメント / 投稿 / お気に入り"]
+        L["リスニングレベル / 統計"]
+    end
 
-    style UI fill:#2a2a3e,stroke:#555,color:#ddd
-    style KERNEL fill:#1a1a2e,stroke:#0cf,color:#fff
-    style T fill:#0d2818,stroke:#0f8,color:#fff
-    style G fill:#2a1a0e,stroke:#fa0,color:#fff
-    style E fill:#111,stroke:#0cf,color:#fff
-    style P fill:#111,stroke:#0cf,color:#fff
-    style A fill:#111,stroke:#0cf,color:#fff
+    subgraph D["データ層"]
+        PG[("PostgreSQL")]
+        RD[("Redis")]
+        KF[["Kafka"]]
+        OS[("オブジェクトストレージ + CDN")]
+    end
+
+    SIREN["セイレーン・レコード API"]
+
+    F --> GW
+    MP --> GW
+    GW --> U
+    GW --> S
+    GW --> L
+    GW --> PX
+    U --> PG
+    S --> PG
+    L --> PG
+    GW --> RD
+    S -. Outbox .-> KF
+    KF --> WS
+    WS -. push .-> F
+    PX --> SIREN
+    F --> OS
 ```
 
-## プロジェクト構造
+## 技術スタック総表
+
+| 層 | 技術選定 |
+|----|----------|
+| クライアント（App / デスクトップ / Web） | Flutter + Dart |
+| クライアント（ミニプログラム） | Taro / uni-app + TypeScript |
+| クライアントローカル DB | Drift (SQLite) |
+| バックエンド（業務） | Java + Spring Boot 3 |
+| バックエンド（高並行） | Go + Gin/Echo |
+| バックエンド（予約） | Rust、Python、Node.js |
+| リレーショナル DB | PostgreSQL |
+| キャッシュ / ランキング | Redis |
+| メッセージキュー | Kafka |
+| 検索 | Elasticsearch（任意） |
+| オブジェクトストレージ | S3 / OSS + CDN |
+| 契約 | OpenAPI + gRPC/Protobuf + AsyncAPI |
+| コンテナ | Docker |
+| オーケストレーション | Kubernetes |
+| サービスメッシュ | Istio |
+| API ゲートウェイ | Kong / Envoy / APISIX |
+| 多言語ビルド | Bazel または CI による統合 |
+| 可観測性 | OpenTelemetry + Prometheus + Grafana + Loki |
+| 設定 / フィーチャーフラグ | Nacos / Apollo + Unleash |
+| 管理画面フロントエンド | React + Ant Design |
+
+## 契約駆動
+
+契約は唯一の正となる情報源です。すべての言語は `contracts/` から SDK を生成し、インターフェース定義を手書きしません。
+
+| 契約 | 技術 | 用途 |
+|------|------|------|
+| REST API | OpenAPI 3.0 | 対外インターフェース、各言語 SDK を自動生成 |
+| 内部通信 | gRPC + Protobuf | Java ↔ Go ↔ 将来の言語、高性能で型安全 |
+| 非同期イベント | AsyncAPI | Kafka イベント schema、新モジュールが購読 |
+| 共通 Schema | JSON Schema | 再生イベント、ユーザー操作など |
+
+詳細は [contracts/README.md](contracts/README.md) を参照。
+
+## 目標リポジトリ構成
 
 ```
-src/
-├── lib.rs              ライブラリエントリ
-├── main.rs             バイナリエントリ (feature 分岐)
-├── kernel.rs           コアエンジン
-├── player.rs           オーディオプレイヤー (rodio)
-├── error.rs            エラー型
-├── api/
-│   ├── mod.rs
-│   ├── types.rs        API レスポンス型
-│   └── client.rs       HTTP クライアント (ureq)
-├── tui/                端末 UI
-│   ├── mod.rs          crossterm 初期化 + イベントループ
-│   ├── app.rs          UI 状態シェル
-│   ├── event.rs        キーボードイベントマッピング
-│   └── ui.rs           レイアウト + レンダリング
-└── origin_gui/         デスクトップ GUI
-    ├── mod.rs          枠なし透明ウィンドウ
-    ├── app.rs          GUI 状態
-    ├── ui.rs           レイアウト + レンダリング
-    ├── theme.rs        テーマシステム (3 テーマ)
-    └── settings.rs     設定ポップアップ
+monster-player/
+├── clients/
+│   └── flutter/          # Flutter クライアント（6 プラットフォーム）
+├── services/
+│   ├── java/             # Spring Boot 業務サービス
+│   ├── go/               # ゲートウェイ / BFF / イベント / セイレーンプロキシ
+│   ├── rust/             # 予約：音声処理、トランスコード
+│   └── python/           # 予約：AI レコメンド、データ分析
+├── contracts/            # 契約の唯一の正（OpenAPI / Protobuf / AsyncAPI）
+├── admin/                # 管理画面フロントエンド（React + Ant Design）
+├── deploy/               # Docker / Kubernetes / Helm
+├── tools/
+│   └── siren-ref/        # セイレーン API リファレンス実装（Rust CLI）
+└── docs/                 # 計画と API ドキュメント
 ```
+
+## このブランチが保持しているもの
+
+このブランチは「整理 + 基礎固め」です。再構築に必要な資産のみを残しています：
+
+| 資産 | 説明 |
+|------|------|
+| [docs/monster-siren-api.md](docs/monster-siren-api.md) | セイレーン・レコード API の契約知識：エンドポイント、フィールド、エラーコード、CDN URL 形式 |
+| [tools/siren-ref](tools/siren-ref) | 検証済み Rust リファレンスクライアント（CLI）：実レスポンスを JSON fixture として取得し、契約テストとゲートウェイ比較に利用 |
+| [contracts/](contracts/) | 契約ディレクトリのプレースホルダと規約 |
+| [docs/PLAN.md](docs/PLAN.md) | 三度目のリビルド完全計画 |
+
+旧 Rust カーネル、TUI / GUI フロントエンド、C FFI レイヤー、Python バインディング、AUR パッケージ、旧 CI はこのブランチから削除済みで、`main` から入手できます。
+
+## なぜ Rust ツールを残すのか
+
+新アーキテクチャで Rust はインターフェースの役割を担いません —— 契約（OpenAPI / Protobuf / AsyncAPI）が唯一の正であり、セイレーンプロキシは Go で実装します。しかし旧 Rust クライアントは実データで検証済みのセイレーン API リファレンス実装であるため、`tools/siren-ref` に絞り込みました：
+
+- 実レスポンスを取得し、契約テスト用 fixture を生成
+- Go プロキシ実装の比較基準（`--base-url` で将来の Go ゲートウェイを指定可能）
+- 「Rust 予約：音声処理、トランスコード」というスタック上の位置づけと整合
 
 ## ロードマップ
 
-- [x] TUI プレイヤー
-- [x] GUI プレイヤー -- 透明ウィンドウ、カスタムタイトルバー
-- [ ] Windows インストーラ (NSIS / WiX)
-- [ ] Linux パッケージ (AUR / deb / rpm)
-- [ ] Android 移植
-- [ ] 追加テーマ
+- [ ] P0 契約と骨格：contracts 初期化、CI、コード生成パイプライン
+- [ ] P1 Go エッジ層：API ゲートウェイ / BFF、セイレーン API プロキシ（キャッシュ + レート制限）、WebSocket チャネル
+- [ ] P2 Java 業務層：アカウントと Hypergryph OAuth2、ゲーム連携、お気に入り、コメント、投稿
+- [ ] P3 Go 高並行：再生イベント同期、カウンタ、Redis ランキング
+- [ ] P4 Flutter クライアント：3 プラットフォームのシェル、再生エンジン、自作タイムスタンプ歌詞アニメーションエンジン
+- [ ] P5 データと運用：Kafka イベント、Flyway マイグレーション、可観測性、K8s デプロイ
+- [ ] P6 管理画面と統計
+
+## 旧バージョン
+
+| チャネル | 説明 |
+|----------|------|
+| `main` ブランチ | 旧版の完全なソース（Rust カーネル + TUI + GUI） |
+| Releases | `msplayer-tui` / `msplayer-gui` / `msplayer-gui.exe` のビルド済みバイナリ |
+| AUR | `yay -S msplayer-tui` |
 
 ## クレジット
 
-音楽コンテンツは [Monster Siren Records](https://monster-siren.hypergryph.com) / Hypergryph により提供されています。
+音楽コンテンツは [セイレーン・レコード (Monster Siren Records)](https://monster-siren.hypergryph.com) / Hypergryph により提供されています。
 
 *本プロジェクトはコミュニティ開発の非公式クライアントであり、Hypergryph とは無関係です。*
 
