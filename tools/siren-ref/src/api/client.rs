@@ -5,8 +5,8 @@
 
 use serde::de::DeserializeOwned;
 
+use crate::api::types::*;
 use crate::error::{Error, Result};
-use crate::types::*;
 
 /// 塞壬唱片 API 默认 Base URL。
 pub const DEFAULT_BASE_URL: &str = "https://monster-siren.hypergryph.com";

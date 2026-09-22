@@ -1,0 +1,321 @@
+openapi: 3.0.3
+info:
+  title: Monster Siren Gateway (minimal demo)
+  version: 0.1.0
+  description: |
+    最小化演示契约：Go 网关以透明代理方式暴露塞壬唱片公开接口。
+
+    设计约定：
+    - 路径与响应包装 `{code,msg,data}` 与上游保持一致，客户端只需替换 base URL；
+    - 网关扩展接口（非上游）：`/healthz`、`/stats`；
+    - 响应头 `X-Cache` 标识缓存状态（HIT / MISS / BYPASS）；
+    - 参数化路径中的 cid 为上游资源标识，可由 `/api/albums` 与 `/api/album/{cid}/detail` 逐级获得。
+
+    契约是唯一真相源：本文件是 demo 的接口定义，Go 网关与 Java / Dart 客户端均以它为准。
+servers:
+  - url: http://127.0.0.1:8080
+    description: 本地最小网关
+
+tags:
+  - name: gateway
+    description: 网关自身能力
+  - name: siren-proxy
+    description: 塞壬唱片接口代理（与上游一致）
+
+paths:
+  /healthz:
+    get:
+      tags: [gateway]
+      summary: 健康检查
+      operationId: health
+      responses:
+        "200":
+          description: 网关存活
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, example: ok }
+                  upstream: { type: string, format: uri }
+                  time: { type: string, format: date-time }
+
+  /stats:
+    get:
+      tags: [gateway]
+      summary: 运行统计（缓存命中/未命中、条目数、运行时长）
+      operationId: stats
+      responses:
+        "200":
+          description: 统计信息
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GatewayStats" }
+
+  /api/albums:
+    get:
+      tags: [siren-proxy]
+      summary: 全量专辑列表
+      operationId: listAlbums
+      responses:
+        "200":
+          description: 专辑列表
+          headers:
+            X-Cache: { $ref: "#/components/headers/XCache" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, msg, data]
+                properties:
+                  code: { type: integer, description: 0 表示成功 }
+                  msg: { type: string }
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Album" }
+
+  /api/album/{cid}/detail:
+    get:
+      tags: [siren-proxy]
+      summary: 专辑详情（含歌曲列表）
+      operationId: getAlbumDetail
+      parameters:
+        - $ref: "#/components/parameters/Cid"
+      responses:
+        "200":
+          description: 专辑详情
+          headers:
+            X-Cache: { $ref: "#/components/headers/XCache" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, msg, data]
+                properties:
+                  code: { type: integer }
+                  msg: { type: string }
+                  data: { $ref: "#/components/schemas/AlbumDetail" }
+
+  /api/songs:
+    get:
+      tags: [siren-proxy]
+      summary: 全量歌曲列表
+      operationId: listSongs
+      responses:
+        "200":
+          description: 歌曲列表
+          headers:
+            X-Cache: { $ref: "#/components/headers/XCache" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, msg, data]
+                properties:
+                  code: { type: integer }
+                  msg: { type: string }
+                  data:
+                    type: object
+                    required: [list]
+                    properties:
+                      list:
+                        type: array
+                        items: { $ref: "#/components/schemas/Song" }
+
+  /api/song/{cid}:
+    get:
+      tags: [siren-proxy]
+      summary: 歌曲详情（音频直链与歌词链接）
+      operationId: getSongDetail
+      parameters:
+        - $ref: "#/components/parameters/Cid"
+      responses:
+        "200":
+          description: 歌曲详情
+          headers:
+            X-Cache: { $ref: "#/components/headers/XCache" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, msg, data]
+                properties:
+                  code: { type: integer }
+                  msg: { type: string }
+                  data: { $ref: "#/components/schemas/SongDetail" }
+
+  /api/news:
+    get:
+      tags: [siren-proxy]
+      summary: 新闻动态
+      operationId: listNews
+      responses:
+        "200":
+          description: 新闻列表
+          headers:
+            X-Cache: { $ref: "#/components/headers/XCache" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, msg, data]
+                properties:
+                  code: { type: integer }
+                  msg: { type: string }
+                  data:
+                    type: object
+                    required: [list, end]
+                    properties:
+                      list:
+                        type: array
+                        items: { $ref: "#/components/schemas/NewsItem" }
+                      end: { type: boolean }
+
+  /api/search:
+    get:
+      tags: [siren-proxy]
+      summary: 按关键词搜索专辑与新闻
+      operationId: search
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          example: 月行
+          schema: { type: string }
+      responses:
+        "200":
+          description: 分组搜索结果
+          headers:
+            X-Cache: { $ref: "#/components/headers/XCache" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, msg, data]
+                properties:
+                  code: { type: integer }
+                  msg: { type: string }
+                  data: { $ref: "#/components/schemas/SearchData" }
+
+components:
+  headers:
+    XCache:
+      description: 网关缓存状态
+      schema:
+        type: string
+        enum: [HIT, MISS, BYPASS]
+
+  parameters:
+    Cid:
+      name: cid
+      in: path
+      required: true
+      description: 上游资源标识（专辑或歌曲 cid）
+      schema: { type: string }
+
+  schemas:
+    Album:
+      type: object
+      required: [cid, name, coverUrl, artistes]
+      properties:
+        cid: { type: string, example: "7760" }
+        name: { type: string, example: 月行水上 }
+        coverUrl: { type: string, format: uri }
+        artistes:
+          type: array
+          items: { type: string }
+
+    AlbumSong:
+      type: object
+      required: [cid, name, artistes]
+      properties:
+        cid: { type: string }
+        name: { type: string }
+        artistes:
+          type: array
+          items: { type: string }
+
+    AlbumDetail:
+      type: object
+      required: [cid, name, intro, belong, coverUrl, coverDeUrl, songs]
+      properties:
+        cid: { type: string }
+        name: { type: string }
+        intro: { type: string }
+        belong: { type: string }
+        coverUrl: { type: string, format: uri }
+        coverDeUrl: { type: string, format: uri }
+        songs:
+          type: array
+          items: { $ref: "#/components/schemas/AlbumSong" }
+
+    Song:
+      type: object
+      required: [cid, name, albumCid, artists]
+      properties:
+        cid: { type: string }
+        name: { type: string }
+        albumCid: { type: string }
+        artists:
+          type: array
+          items: { type: string }
+
+    SongDetail:
+      type: object
+      required: [cid, name, albumCid, sourceUrl, artists]
+      properties:
+        cid: { type: string }
+        name: { type: string }
+        albumCid: { type: string }
+        sourceUrl: { type: string, format: uri, description: WAV 音频直链 }
+        lyricUrl: { type: string, format: uri, nullable: true }
+        mvUrl: { type: string, format: uri, nullable: true }
+        mvCoverUrl: { type: string, format: uri, nullable: true }
+        artists:
+          type: array
+          items: { type: string }
+
+    NewsItem:
+      type: object
+      required: [cid, title, cate, date]
+      properties:
+        cid: { type: string }
+        title: { type: string }
+        cate: { type: integer }
+        date: { type: string }
+
+    SearchData:
+      type: object
+      required: [albums, news]
+      properties:
+        albums:
+          type: object
+          required: [list, end]
+          properties:
+            list:
+              type: array
+              items: { $ref: "#/components/schemas/Album" }
+            end: { type: boolean }
+        news:
+          type: object
+          required: [list, end]
+          properties:
+            list:
+              type: array
+              items: { $ref: "#/components/schemas/NewsItem" }
+            end: { type: boolean }
+
+    GatewayStats:
+      type: object
+      required: [cache, uptime_seconds]
+      properties:
+        cache:
+          type: object
+          required: [entries, hits, misses, ttl_seconds]
+          properties:
+            entries: { type: integer }
+            hits: { type: integer }
+            misses: { type: integer }
+            ttl_seconds: { type: integer }
+        uptime_seconds: { type: integer }

@@ -2,18 +2,16 @@
 //!
 //! 拉取真实响应并输出 JSON fixture，供跨语言契约测试使用。
 //! 也可通过 `--base-url` 指向未来的 Go 网关实现，做响应对照验证。
-
-mod client;
-mod error;
-mod types;
+//!
+//! 本 CLI 消费 `siren-ref` 库（`siren_ref::api`），不重复实现调用逻辑。
 
 use std::io::Write;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::client::Client;
-use crate::error::Result;
+use siren_ref::api::client::{Client, DEFAULT_BASE_URL};
+use siren_ref::error::Result;
 
 /// 塞壬唱片 API 参考 CLI
 #[derive(Parser)]
@@ -24,7 +22,7 @@ use crate::error::Result;
 )]
 struct Cli {
     /// API base URL; point it to a gateway/proxy implementation to compare responses
-    #[arg(long, global = true, default_value = client::DEFAULT_BASE_URL)]
+    #[arg(long, global = true, default_value = DEFAULT_BASE_URL)]
     base_url: String,
 
     /// Write output to a file instead of stdout

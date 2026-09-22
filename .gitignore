@@ -52,3 +52,8 @@ temp/
 # --- 其他 ---
 *.tmp
 *.log
+
+# --- demo 生成物 ---
+demo/out/
+demo/fixtures/
+demo/java-client/lib/
